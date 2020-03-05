@@ -1,0 +1,215 @@
+\documentclass{article}
+\title{Decision Trees Homework}
+\author{Dmitrii Dunin, ITU ID 94739}
+%\DeclareGraphicsExtensions{.png,.pdf}
+\usepackage{Sweave}
+\begin{document}
+\input{Dmitrii-concordance}
+\begin{center}
+{\bf\Large Decision Trees Homework}
+\end{center}
+\begin{center}
+{\Large Dmitrii Dunin, ITU ID 94739}
+\end{center}
+\begin{center}
+{\bf\Large International Technological University}
+\end{center}
+
+\section*{Question 1}
+
+\begin{Schunk}
+\begin{Sinput}
+> rm(list=ls())
+> require(graphics)
+> require(stringr)
+> setwd("F:/Workspace/R/Homework2")
+\end{Sinput}
+\end{Schunk}
+
+1) This question uses the following ages for a set of trees: 19, 23, 30, 30, 45,
+25, 24, 20. Store them in R using the syntax ages<-c(19, 23, 30, 30, 45, 25, 24, 20).
+\begin{Schunk}
+\begin{Sinput}
+> ages<-c(19, 23, 30, 30, 45, 25, 24, 20)
+\end{Sinput}
+\end{Schunk}
+\subsection*{1a)}
+a) Compute the standard deviation in R using the sd() function. Also compute the mean and median.
+\begin{Schunk}
+\begin{Sinput}
+> sd(ages)
+\end{Sinput}
+\begin{Soutput}
+[1] 8.315218
+\end{Soutput}
+\begin{Sinput}
+> mean_ages<-mean(ages)
+> mean_ages
+\end{Sinput}
+\begin{Soutput}
+[1] 27
+\end{Soutput}
+\begin{Sinput}
+> median_ages<-median(ages)
+> median_ages
+\end{Sinput}
+\begin{Soutput}
+[1] 24.5
+\end{Soutput}
+\end{Schunk}
+\subsection*{1b)}
+b) Compute the same value in R without the sd function.
+\begin{Schunk}
+\begin{Sinput}
+> sqrt(sum((ages-mean(ages))^2/(length(ages)-1)))
+\end{Sinput}
+\begin{Soutput}
+[1] 8.315218
+\end{Soutput}
+\end{Schunk}
+\subsection*{1c)}
+c) Using R, how does the standard deviation from part a) change if you add
+10 to all the values?
+\begin{Schunk}
+\begin{Sinput}
+> ages_plus_10<-ages+10
+> sd(ages_plus_10)
+\end{Sinput}
+\begin{Soutput}
+[1] 8.315218
+\end{Soutput}
+\end{Schunk}
+Standard deviation does not change
+\subsection*{1d)}
+d) Using R, how does the standard deviation in part a) change if you
+multiply all the values by 100?
+\begin{Schunk}
+\begin{Sinput}
+> ages_multiply_100<-ages*100
+> sd(ages_multiply_100)
+\end{Sinput}
+\begin{Soutput}
+[1] 831.5218
+\end{Soutput}
+\end{Schunk}
+Standard deviation also gets multiplied by 100
+\subsection*{1e)}
+e) Next add another tree of age 70 to the sample. Compute the mean and
+median with this tree added to the sample. How have the mean and
+median changed?
+\begin{Schunk}
+\begin{Sinput}
+> ages_add_70<-append(ages, 70)
+> mean_ages_70<-mean(ages_add_70)
+> mean_ages_70
+\end{Sinput}
+\begin{Soutput}
+[1] 31.77778
+\end{Soutput}
+\begin{Sinput}
+> mean_ages_70 - mean_ages
+\end{Sinput}
+\begin{Soutput}
+[1] 4.777778
+\end{Soutput}
+\begin{Sinput}
+> median_ages_70<-median(ages_add_70)
+> median_ages_70
+\end{Sinput}
+\begin{Soutput}
+[1] 25
+\end{Soutput}
+\begin{Sinput}
+> median_ages_70 - median_ages
+\end{Sinput}
+\begin{Soutput}
+[1] 0.5
+\end{Soutput}
+\end{Schunk}
+
+\section*{Question 2}
+
+\begin{Schunk}
+\begin{Sinput}
+> rm(list=ls())
+\end{Sinput}
+\end{Schunk}
+
+2) Here is the data table for question 2.
+\begin{Schunk}
+\begin{Sinput}
+> TrainData<-read.csv("HW02DataTrain.csv",header=TRUE)
+> str(TrainData)
+\end{Sinput}
+\begin{Soutput}
+'data.frame':	9 obs. of  4 variables:
+ $ a1    : logi  TRUE TRUE TRUE FALSE FALSE FALSE ...
+ $ a2    : logi  TRUE TRUE FALSE FALSE TRUE TRUE ...
+ $ a3    : int  1 6 5 4 7 3 8 7 5
+ $ Target: Factor w/ 2 levels "-","+": 2 2 1 2 1 1 1 2 1
+\end{Soutput}
+\begin{Sinput}
+> summary(TrainData)
+\end{Sinput}
+\begin{Soutput}
+     a1              a2                a3        Target
+ Mode :logical   Mode :logical   Min.   :1.000   -:5   
+ FALSE:5         FALSE:4         1st Qu.:4.000   +:4   
+ TRUE :4         TRUE :5         Median :5.000         
+ NA's :0         NA's :0         Mean   :5.111         
+                                 3rd Qu.:7.000         
+                                 Max.   :8.000         
+\end{Soutput}
+\end{Schunk}
+\subsection*{2a)}
+The following tree was created using rpart for the data table given above.
+\begin{Schunk}
+\begin{Sinput}
+> fit<-rpart(Target~a1+a2+a3, 
++       data=TrainData, 
++       method="class",
++       control=rpart.control(minsplit=0,minbucket=0,maxdepth=5))
+> fit
+\end{Sinput}
+\begin{Soutput}
+n= 9 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+ 1) root 9 4 - (0.5555556 0.4444444)  
+   2) a1< 0.5 5 1 - (0.8000000 0.2000000)  
+     4) a2>=0.5 3 0 - (1.0000000 0.0000000) *
+     5) a2< 0.5 2 1 - (0.5000000 0.5000000)  
+      10) a3>=6 1 0 - (1.0000000 0.0000000) *
+      11) a3< 6 1 0 + (0.0000000 1.0000000) *
+   3) a1>=0.5 4 1 + (0.2500000 0.7500000)  
+     6) a2< 0.5 2 1 - (0.5000000 0.5000000)  
+      12) a3< 6 1 0 - (1.0000000 0.0000000) *
+      13) a3>=6 1 0 + (0.0000000 1.0000000) *
+     7) a2>=0.5 2 0 + (0.0000000 1.0000000) *
+\end{Soutput}
+\end{Schunk}
+Use this tree to predict the class labels (either a + or -) for the following test
+observations:
+\begin{Schunk}
+\begin{Sinput}
+> PredictData<-read.csv("HW02DataPredict.csv",header=TRUE)
+> str(PredictData)
+\end{Sinput}
+\begin{Soutput}
+'data.frame':	4 obs. of  3 variables:
+ $ a1: logi  TRUE TRUE FALSE FALSE
+ $ a2: logi  TRUE FALSE TRUE FALSE
+ $ a3: num  2.5 5.5 2.5 8.5
+\end{Soutput}
+\begin{Sinput}
+> predict(fit, PredictData, type="class")
+\end{Sinput}
+\begin{Soutput}
+1 2 3 4 
++ - - - 
+Levels: - +
+\end{Soutput}
+\end{Schunk}
+\end{document}

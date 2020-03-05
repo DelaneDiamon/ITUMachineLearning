@@ -1,0 +1,689 @@
+\documentclass[12pt]{article}
+\title{Homework 1}
+\author{Dmitrii Dunin, ITU ID 94739}
+%\DeclareGraphicsExtensions{.png,.pdf}
+\usepackage{Sweave}
+\begin{document}
+\input{Dmitrii-concordance}
+\begin{center}
+{\bf\Large Homework 1}
+\linebreak
+\linebreak
+{\bf\Large Dmitrii Dunin 94739}
+\linebreak
+\linebreak
+{\bf\Large International Technological University}
+\end{center}
+\begin{center}
+{\bf\Large Question 1 - Qualitative and Quantitative data}
+\linebreak
+\end{center}
+1.This question uses the data HW01pb1data.csv. 
+Download it to your computer.
+\tabularnewline
+a) Read in the data in R using\\
+\tabularnewline
+InputData<-read.csv("HW01pb1data.csv",header=FALSE). 
+Note, you first needto specify your working directory using 
+the setwd() command. Determine whether each of the attributes (columns) 
+are treated as qualitative (categorical) or quantitative
+(numeric) using R. Explain how you can tell using R.
+
+
+Reading the data:
+\begin{Schunk}
+\begin{Sinput}
+> setwd("F:/Workspace/R/Homework1")
+> InputData<-read.csv("HW01pb1data.csv",header=FALSE)
+\end{Sinput}
+\end{Schunk}
+
+Identifying column types:
+\begin{Schunk}
+\begin{Sinput}
+> str(InputData)
+\end{Sinput}
+\begin{Soutput}
+'data.frame':	800 obs. of  5 variables:
+ $ V1: int  0 10 30 0 20 10 10 50 0 30 ...
+ $ V2: int  0 0 0 10 50 0 0 10 10 20 ...
+ $ V3: int  0 10 40 10 10 100 0 10 0 10 ...
+ $ V4: Factor w/ 25 levels "0","10","100",..: 2 1 17 2 10 1 2 2 13 10 ...
+ $ V5: Factor w/ 19 levels "0","10","120",..: 1 2 6 6 11 2 2 6 2 11 ...
+\end{Soutput}
+\end{Schunk}
+\begin{itemize}
+\item{First 3 columns (V1, V2, V3) are of \textbf{integer} type, so they are \textbf{quantitative}}
+\item{Last 2 columns (V4, V5) are of \textbf{factor} type, so they are \textbf{nominal categorical} or \textbf{qualitative}}
+\end{itemize}
+
+If some data cannot be converted to numeric, it will stay as character data.
+One way we can check this is to output levels of factors V4 and V5.
+\newpage
+b) What is the specific problem that causes two of these attributes to be read in as
+qualitative (categorical) when it seems it should be quantitative (numeric)?
+We investigate levels of V4 and produce a vector with true/false values
+after is.numeric function on a factor.
+\begin{Schunk}
+\begin{Sinput}
+> levels(InputData$V4)
+\end{Sinput}
+\begin{Soutput}
+ [1] "0"           "10"          "100"         "110"         "120"        
+ [6] "140"         "15"          "150"         "160"         "20"         
+[11] "200"         "25"          "30"          "35"          "40"         
+[16] "5"           "50"          "55"          "60"          "65"         
+[21] "70"          "80"          "85"          "90"          "thirty five"
+\end{Soutput}
+\begin{Sinput}
+> boolean_vector <- as.numeric(levels(InputData[,4]))
+\end{Sinput}
+\end{Schunk}
+Then we will indentify index(s) in the boolean vector we just produced, which corresponds
+to NA - entities which could not be converted to numbers.
+\begin{Schunk}
+\begin{Sinput}
+> index_of_na<-which(is.na(boolean_vector))
+> index_of_na
+\end{Sinput}
+\begin{Soutput}
+[1] 25
+\end{Soutput}
+\end{Schunk}
+Then we will look for that value amoung the levels of V4
+\begin{Schunk}
+\begin{Sinput}
+> non_numeric_value<-levels(InputData[,4])[index_of_na]
+> non_numeric_value
+\end{Sinput}
+\begin{Soutput}
+[1] "thirty five"
+\end{Soutput}
+\begin{Sinput}
+> row_number_V4 <- which(InputData[,4] == non_numeric_value)
+> row_number_V4
+\end{Sinput}
+\begin{Soutput}
+[1] 405
+\end{Soutput}
+\end{Schunk}
+Do the same for V5
+\begin{Schunk}
+\begin{Sinput}
+> levels(InputData$V5)
+\end{Sinput}
+\begin{Soutput}
+ [1] "0"           "10"          "120"         "140"         "15"         
+ [6] "20"          "25"          "255"         "30"          "35"         
+[11] "40"          "45"          "5"           "50"          "55"         
+[16] "60"          "70"          "80"          "twenty five"
+\end{Soutput}
+\begin{Sinput}
+> boolean_vector <- as.numeric(levels(InputData[,5]))
+> index_of_na<-which(is.na(boolean_vector))
+> index_of_na
+\end{Sinput}
+\begin{Soutput}
+[1] 19
+\end{Soutput}
+\begin{Sinput}
+> non_numeric_value<-levels(InputData[,5])[index_of_na]
+> non_numeric_value
+\end{Sinput}
+\begin{Soutput}
+[1] "twenty five"
+\end{Soutput}
+\begin{Sinput}
+> row_number_V5 <- which(InputData[,5] == non_numeric_value)
+> row_number_V5
+\end{Sinput}
+\begin{Soutput}
+[1] 531
+\end{Soutput}
+\end{Schunk}
+We may observe that in V4 there is a string "thirty five", in V5 there is a string "twenty five".
+Those two non-numeric pieces of data made those observations put into factors.
+\newpage
+c) Use the command plot() in R to make a plot for column 1 by entering
+plot(InputData[,1]). Use a similar command to plot column 4 (that is plot(InputData[,4])).
+Because one variable is read in as quantitative (numeric) and the other as qualitative
+(categorical) these two plots are showing completely different things by default. Explain
+exactly what is being plotted in each case. Include these plots in your homework.
+
+\begin{Schunk}
+\begin{Sinput}
+> plot(InputData[,1], main="Plot for numeric vector V1")
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-PlotInputData1}
+\tabularnewline
+In this case plot illustrates distribution of numeric data pieces location under specified 
+indexes in the integer vector. 
+Example: 
+\begin{itemize}
+\item {Integer "between 100 and 150" has index of "around 800" (In fact, integer 125, index 788)}
+\item {Highest integer is around 280 with index almost 0 (In fact, integer 270, index 13)}
+\end{itemize}
+
+\newpage
+\begin{Schunk}
+\begin{Sinput}
+> plot(InputData[,4], main="Plot for categorical factor V4")
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-PlotInputData2}
+
+This plot demonstrates the number of occurencies of each category in the factor.
+Example: 
+\begin{itemize}
+\item {"5" has almost 150 occurrencies (In fact, "5" has 149 occurencies)}
+\end{itemize}
+
+\newpage
+d) (optional) Read the data into Excel. Excel should have no problem opening the file
+directly since it is .csv. Create a new column that is equal to the forth column plus 10.
+What is the result for the problem observations (rows) you identified in part b? What
+specific outcome does Excel display?
+\tabularnewline
+Excel will show \#VALUE! in the cell which could not calculate "thirty five" + 10 (index 405)
+\newpage
+
+\begin{center}
+{\bf\Large Question 2 - Data Sampling}
+\linebreak
+\end{center}
+
+2) This question uses the data in the file HW01pb2data.csv. Download it to your
+computer.
+\tabularnewline
+a) Read the data into R using
+InputData<-read.csv("HW01pb2data.csv",header=FALSE). Note, you first need
+to specify your working directory using the setwd() command. Extract a simple random
+sample with replacement of 10,000 observations (rows). (Hint: R has a function called
+sample) Show your R commands for doing this.
+\begin{Schunk}
+\begin{Sinput}
+> result_sample<-sample(InputData$V1, 10000, replace=TRUE)
+\end{Sinput}
+\end{Schunk}
+b) For your sample, use the functions mean(), max(), var() and quantile(,.25) to computethe mean, 
+maximum, variance and 1st quartile respectively. Show your R code and the resulting values
+\tabularnewline
+\begin{Schunk}
+\begin{Sinput}
+> mean_sample<-mean(result_sample)
+> max_sample<-max(result_sample)
+> var_sample<-var(result_sample)
+> quantile_sample<-quantile(result_sample, .25)
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> mean_sample
+\end{Sinput}
+\begin{Soutput}
+[1] 9.452193
+\end{Soutput}
+\begin{Sinput}
+> max_sample
+\end{Sinput}
+\begin{Soutput}
+[1] 17.77793
+\end{Soutput}
+\begin{Sinput}
+> var_sample
+\end{Sinput}
+\begin{Soutput}
+[1] 3.886055
+\end{Soutput}
+\begin{Sinput}
+> quantile_sample
+\end{Sinput}
+\begin{Soutput}
+     25% 
+8.120677 
+\end{Soutput}
+\end{Schunk}
+
+\newpage
+c) Compute the same quantities in part b on the entire data set and show your answers.
+How much do they differ from your answers in part b?
+\begin{Schunk}
+\begin{Sinput}
+> mean_full<-mean(InputData$V1)
+> max_full<-max(InputData$V1)
+> var_full<-var(InputData$V1)
+> quantile_full<-quantile(InputData$V1, .25)
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> mean_full
+\end{Sinput}
+\begin{Soutput}
+[1] 9.451468
+\end{Soutput}
+\begin{Sinput}
+> mean_full - mean_sample
+\end{Sinput}
+\begin{Soutput}
+[1] -0.0007246496
+\end{Soutput}
+\begin{Sinput}
+> max_full
+\end{Sinput}
+\begin{Soutput}
+[1] 18.96657
+\end{Soutput}
+\begin{Sinput}
+> max_full - max_sample
+\end{Sinput}
+\begin{Soutput}
+[1] 1.188641
+\end{Soutput}
+\begin{Sinput}
+> var_full
+\end{Sinput}
+\begin{Soutput}
+[1] 4.001822
+\end{Soutput}
+\begin{Sinput}
+> var_full - var_sample
+\end{Sinput}
+\begin{Soutput}
+[1] 0.1157664
+\end{Soutput}
+\begin{Sinput}
+> quantile_full
+\end{Sinput}
+\begin{Soutput}
+    25% 
+8.10388 
+\end{Soutput}
+\begin{Sinput}
+> quantile_full - quantile_sample
+\end{Sinput}
+\begin{Soutput}
+        25% 
+-0.01679649 
+\end{Soutput}
+\end{Schunk}
+
+d) (Optional Part) Save your sample from R to a csv file using the command write.csv().
+Then open this file with Excel and compute the mean, maximum, variance and 1st
+quartile. Provide the values and name the Excel functions you used to compute these.
+\tabularnewline
+\tabularnewline
+The following results were obtained from Excel (current sample results are in the last row):
+\tabularnewline
+\begin{Schunk}
+\begin{Sinput}
+> library(xtable)
+> xtable(fn_res_table)
+\end{Sinput}
+% latex table generated in R 3.3.2 by xtable 1.8-2 package
+% Mon Mar 02 21:32:59 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rllll}
+  \hline
+ & V1 & V2 & V3 & 25\% \\ 
+  \hline
+functions & TRIMMEAN & MAX & VAR & QUARTILE \\ 
+  excel\_results & 9.430558845 & 16.99675955 & 4.016940173 & 8.071343166 \\ 
+  sample\_results & 9.45219268453488 & 17.7779275335019 & 3.88605522911142 & 8.12067673483403 \\ 
+   \hline
+\end{tabular}
+\end{table}\end{Schunk}
+
+
+e) (Optional Part) Exactly what happens if you try to open the full data set with Excel?
+\tabularnewline
+Excel will load only part of the file (in my case only 1048576 rows) and display the message
+"File not loaded completely."
+\newpage
+
+
+\begin{center}
+{\bf\Large Question 3 - Ocean and Desert Houses Data}
+\linebreak
+\end{center}
+
+3) This question uses a sample of 2000 Ocean View house prices in the file
+HW01pb3OceanViewdata.csv and a sample of 5000 Desert house prices in the file
+HW01pb3Desertdata.csv. Download both data sets to your computer. Note that the
+house prices are in thousands of dollars. (Hint: look at the file MyFirstRLesson.r)
+\tabularnewline
+
+a) Use R to produce a single graph displaying a box plot for each set.
+Include the R commands and the plot. Put a name in the title of the plot (for example,
+main="House Box Plots"). Explain the box plot.
+
+\begin{Schunk}
+\begin{Sinput}
+> prices_ocean<-InputDataOcean[,1]*1000
+> boxplot(prices_ocean, main="Ocean Houses")$stats[c(1,2,5),]
+\end{Sinput}
+\begin{Soutput}
+[1] 1165000 1462500 1966000
+\end{Soutput}
+\end{Schunk}
+\includegraphics{Dmitrii-OceanHousesPlot}
+
+Ocean houses boxplot illustrates that Q1-Q3 for ocean houses is around \$1.4M-\$1.6M. 
+There are several outliers which prices are even above supposed "maximum" (Q3 + 1.5*IQR)
+of \$1,966,000.00 and just a couple of ouliers on the "minimum" end.
+
+\newpage
+\begin{Schunk}
+\begin{Sinput}
+> prices_desert<-InputDataDesert[,1]*1000
+> boxplot(prices_desert, main="Desert Houses")$stats[c(1,2,5),]
+\end{Sinput}
+\begin{Soutput}
+[1]  10000  51000 353000
+\end{Soutput}
+\end{Schunk}
+\includegraphics{Dmitrii-DesertHousesPlot}
+
+In this plot the situation is a bit different. There are plenty of outliers, above "maximum"
+of \$353,000.00, but majority of the house prices stay near mean of \$51,000.00
+
+\newpage
+b) Use R to produce a frequency histogram for only the Ocean View house prices. 
+Use intervals of width \$250,000 beginning at 0 and ending at \$3 million. 
+Include the R commands and the plot. 
+Create an appropriate title for the plot. (Hint: Use the hist R command)
+\begin{Schunk}
+\begin{Sinput}
+> breaks_hist<-seq(0, 3000000, 250000)
+> hist(prices_ocean, main="Ocean Houses", freq=TRUE, breaks=breaks_hist, xlab = "Ocean House Price")
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-OceanHousesHist}
+
+\newpage
+c) The empirical cumulative distribution function is described in the web site:
+http://en.wikipedia.org/wiki/ECDF Use R to plot the ECDF of the Ocean View houses.
+Make another ECDF plot of the Desert houses. Place both plots on the same page.
+Include legends. Include the R commands and the plot. Create a title for each plot.
+
+
+\begin{Schunk}
+\begin{Sinput}
+> plot(ecdf(prices_ocean), 
++      main="Ocean Houses ECDF", 
++      col.points = "blue",
++      col.hor = "red")
+> legend(mean(prices_ocean), 
++        0.2,
++        c("Limit values","Observations"),
++        col=c("red","blue"),
++        lty=c("solid","dashed"))
+> 
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> plot(ecdf(prices_desert), 
++      main="Ocean Houses ECDF", 
++      col.points = "orange",
++      col.hor = "red")
+> legend(mean(prices_desert)*2, 
++        0.2,
++        c("Limit values","Observations"),
++        col=c("red","orange"),
++        lty=c("solid","dashed"))
+\end{Sinput}
+\end{Schunk}
+\begin{figure}
+\includegraphics{Dmitrii-OceanHousesECDF}
+\includegraphics{Dmitrii-DesertHousesECDF}
+\end{figure}
+
+\newpage
+\begin{center}
+{\bf\Large Question 4 - Orange Trees Data}
+\linebreak
+\end{center}
+
+4) This question uses the Orange data set which is included in the R download. Type in
+the r command: orange <- as.data.frame(Orange). The data frame, orange,
+consists of three columns: Tree, age, and circumference.
+\begin{Schunk}
+\begin{Sinput}
+> orange <- as.data.frame(Orange)
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> summary(orange)
+\end{Sinput}
+\begin{Soutput}
+ Tree       age         circumference  
+ 3:7   Min.   : 118.0   Min.   : 30.0  
+ 1:7   1st Qu.: 484.0   1st Qu.: 65.5  
+ 5:7   Median :1004.0   Median :115.0  
+ 2:7   Mean   : 922.1   Mean   :115.9  
+ 4:7   3rd Qu.:1372.0   3rd Qu.:161.5  
+       Max.   :1582.0   Max.   :214.0  
+\end{Soutput}
+\begin{Sinput}
+> str(orange)
+\end{Sinput}
+\begin{Soutput}
+'data.frame':	35 obs. of  3 variables:
+ $ Tree         : Ord.factor w/ 5 levels "3"<"1"<"5"<"2"<..: 2 2 2 2 2 2 2 4 4 4 ...
+ $ age          : num  118 484 664 1004 1231 ...
+ $ circumference: num  30 58 87 115 120 142 145 33 69 111 ...
+ - attr(*, "formula")=Class 'formula'  language circumference ~ age | Tree
+  .. ..- attr(*, ".Environment")=<environment: R_EmptyEnv> 
+ - attr(*, "labels")=List of 2
+  ..$ x: chr "Time since December 31, 1968"
+  ..$ y: chr "Trunk circumference"
+ - attr(*, "units")=List of 2
+  ..$ x: chr "(days)"
+  ..$ y: chr "(mm)"
+\end{Soutput}
+\end{Schunk}
+
+a) Use plot() in R to make a scatter plot for this data with age on the x-axis and
+circumference on the y-axis. What range should be given for the x-axis? What about
+the y-axis range? Create an appropriate title for the plot. Include the R commands and
+the plot.
+
+\begin{Schunk}
+\begin{Sinput}
+> min_age = trunc(min(orange[,2]))
+> max_age = trunc(max(orange[,2]))
+> number_of_axis_points = 25
+> plot(orange[,2], 
++      orange[,3], 
++      main = "Age vs Circumference", 
++      xlab = "Age", 
++      ylab = "Circumference", 
++      xaxt="n")
+> axis(1, 
++      xaxp=c(min_age - (min_age%%number_of_axis_points), 
++             max_age + (number_of_axis_points - max_age%%number_of_axis_points), 
++             number_of_axis_points), 
++      las=2)
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-OrangePlot}
+\linebreak
+b) Compute the correlation between the age and circumference of the first tree in R
+using the function cor().
+\begin{Schunk}
+\begin{Sinput}
+> cor(orange[,2], orange[,3], use = "everything")
+\end{Sinput}
+\begin{Soutput}
+[1] 0.9135189
+\end{Soutput}
+\end{Schunk}
+
+c) For this problem you may want to use some the following R functions: names, merge,
+cov, and cor. Create a covariance - correlation chart which has the covariance andcorrelation of the age and circumference for each tree. Have your code print out the
+following chart with the same titles and the values filled in.
+\linebreak
+\begin{Schunk}
+\begin{Sinput}
+> o1<-subset(orange, orange$Tree == 1)
+> o2<-subset(orange, orange$Tree == 2)
+> o3<-subset(orange, orange$Tree == 3)
+> o4<-subset(orange, orange$Tree == 4)
+> o5<-subset(orange, orange$Tree == 5)
+> cov.df <- data.frame("fac" = factor(1:5),
++                      "cov" = c(cov(o1$age, o1$circumference),
++                                cov(o2$age, o2$circumference),
++                                cov(o3$age, o3$circumference),
++                                cov(o4$age, o4$circumference),
++                                cov(o5$age, o5$circumference)))
+> cor.df <- data.frame("fac" = factor(1:5),
++                      "cor" = c(cor(o1$age, o1$circumference),
++                                cor(o2$age, o2$circumference),
++                                cor(o3$age, o3$circumference),
++                                cor(o4$age, o4$circumference),
++                                cor(o5$age, o5$circumference)))
+> chart <- merge(cov.df, cor.df,by.x = "fac", by.y = "fac")
+> names(chart) <- c("ORANGE TREES","COVARIANCE","CORRELATION")
+> row.names(chart)<- c("O1","O2","O3","O4","O5")
+> chart
+\end{Sinput}
+\begin{Soutput}
+   ORANGE TREES COVARIANCE CORRELATION
+O1            1   22340.07   0.9854675
+O2            2   34290.45   0.9873624
+O3            3   22239.83   0.9881766
+O4            4   37062.62   0.9844610
+O5            5   30442.81   0.9877376
+\end{Soutput}
+\end{Schunk}
+
+
+\newpage
+\begin{center}
+{\bf\Large Question 5 - Mean and Median Modification}
+\linebreak
+\end{center}
+5) This question uses the sample of 5,000 Desert Houses from problem three.
+\begin{Schunk}
+\begin{Sinput}
+> sample_desert<-sample(InputDataDesert[,1]*1000, 5000)
+\end{Sinput}
+\end{Schunk}
+a) What is the median value? Is it larger or smaller than the mean?
+\begin{Schunk}
+\begin{Sinput}
+> median_desert<-median(sample_desert)
+> mean_desert<-mean(sample_desert)
+> median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 89000
+\end{Soutput}
+\begin{Sinput}
+> mean_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 144034.8
+\end{Soutput}
+\end{Schunk}
+.
+
+b) What does your answer to part a) suggest about the shape of the distribution 
+(rightskewed or left-skewed)? 
+Does the distribution have more weight at one end? 
+Is there a longer tail at the other? 
+The distribution is skewed to the right if there is a long tail to the right. 
+That is if the mean is greater than the median, 
+the distribution is skewed to the right. 
+A few high numbers will pull the mean above the median.
+
+\begin{Schunk}
+\begin{Sinput}
+> median_desert - mean_desert
+\end{Sinput}
+\begin{Soutput}
+[1] -55034.8
+\end{Soutput}
+\end{Schunk}
+\tabularnewline
+In this case median is less than the mean, and distribution is right-skewed
+
+\tabularnewline
+
+c) How does the median change if you add 10 (thousand dollars) to all the values?
+\begin{Schunk}
+\begin{Sinput}
+> median_desert_plus<-median(sample_desert+10000)
+> median_desert_plus
+\end{Sinput}
+\begin{Soutput}
+[1] 99000
+\end{Soutput}
+\begin{Sinput}
+> median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 89000
+\end{Soutput}
+\begin{Sinput}
+> median_desert_plus - median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 10000
+\end{Soutput}
+\begin{Sinput}
+> mean_desert_plus<-mean(sample_desert+10000)
+> mean_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 144034.8
+\end{Soutput}
+\begin{Sinput}
+> mean_desert_plus
+\end{Sinput}
+\begin{Soutput}
+[1] 154034.8
+\end{Soutput}
+\begin{Sinput}
+> 
+\end{Sinput}
+\end{Schunk}
+Plain increase by 10000
+
+d) How does the median change if you multiply all the values by 2?
+\begin{Schunk}
+\begin{Sinput}
+> median_desert_multiply<-median(sample_desert*2)
+> median_desert_multiply
+\end{Sinput}
+\begin{Soutput}
+[1] 178000
+\end{Soutput}
+\begin{Sinput}
+> median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 89000
+\end{Soutput}
+\begin{Sinput}
+> median_desert_multiply - median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 89000
+\end{Soutput}
+\begin{Sinput}
+> median_desert_multiply %/% median_desert
+\end{Sinput}
+\begin{Soutput}
+[1] 2
+\end{Soutput}
+\end{Schunk}
+Plain two times increase 
+
+
+\end{document}
+

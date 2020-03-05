@@ -1,0 +1,103 @@
+\documentclass{article}
+\title{Decision Trees Homework}
+\author{Dmitrii Dunin, ITU ID 94739}
+%\DeclareGraphicsExtensions{.png,.pdf}
+\begin{document}
+\SweaveOpts{concordance=TRUE,prefix.string=Dmitrii}
+\begin{center}
+{\bf\Large Decision Trees Homework}
+\end{center}
+\begin{center}
+{\Large Dmitrii Dunin, ITU ID 94739}
+\end{center}
+\begin{center}
+{\bf\Large International Technological University}
+\end{center}
+
+\section*{Question 1}
+
+<<label=Setup1, echo=True,results=verbatim>>=
+rm(list=ls())
+require(graphics)
+require(stringr)
+setwd("F:/Workspace/R/Homework2")
+@
+
+1) This question uses the following ages for a set of trees: 19, 23, 30, 30, 45,
+25, 24, 20. Store them in R using the syntax ages<-c(19, 23, 30, 30, 45, 25, 24, 20).
+<<label=Answer1, echo=True,results=verbatim>>=
+ages<-c(19, 23, 30, 30, 45, 25, 24, 20)
+@
+\subsection*{1a)}
+a) Compute the standard deviation in R using the sd() function. Also compute the mean and median.
+<<label=Answer1a, echo=True,results=verbatim>>=
+sd(ages)
+mean_ages<-mean(ages)
+mean_ages
+median_ages<-median(ages)
+median_ages
+@
+\subsection*{1b)}
+b) Compute the same value in R without the sd function.
+<<label=Answer1b, echo=True,results=verbatim>>=
+sqrt(sum((ages-mean(ages))^2/(length(ages)-1)))
+@
+\subsection*{1c)}
+c) Using R, how does the standard deviation from part a) change if you add
+10 to all the values?
+<<label=Answer1c, echo=True,results=verbatim>>=
+ages_plus_10<-ages+10
+sd(ages_plus_10)
+@
+Standard deviation does not change
+\subsection*{1d)}
+d) Using R, how does the standard deviation in part a) change if you
+multiply all the values by 100?
+<<label=Answer1d, echo=True,results=verbatim>>=
+ages_multiply_100<-ages*100
+sd(ages_multiply_100)
+@
+Standard deviation also gets multiplied by 100
+\subsection*{1e)}
+e) Next add another tree of age 70 to the sample. Compute the mean and
+median with this tree added to the sample. How have the mean and
+median changed?
+<<label=Answer1e, echo=True,results=verbatim>>=
+ages_add_70<-append(ages, 70)
+mean_ages_70<-mean(ages_add_70)
+mean_ages_70
+mean_ages_70 - mean_ages
+median_ages_70<-median(ages_add_70)
+median_ages_70
+median_ages_70 - median_ages
+@
+
+\section*{Question 2}
+
+<<label=Setup2, echo=True,results=verbatim>>=
+rm(list=ls())
+@
+
+2) Here is the data table for question 2.
+<<label=Answer2, echo=True,results=verbatim>>=
+TrainData<-read.csv("HW02DataTrain.csv",header=TRUE)
+str(TrainData)
+summary(TrainData)
+@
+\subsection*{2a)}
+The following tree was created using rpart for the data table given above.
+<<label=Answer2a1, echo=True,results=verbatim>>=
+fit<-rpart(Target~a1+a2+a3, 
+      data=TrainData, 
+      method="class",
+      control=rpart.control(minsplit=0,minbucket=0,maxdepth=5))
+fit
+@
+Use this tree to predict the class labels (either a + or -) for the following test
+observations:
+<<label=Answer2a2, echo=True,results=verbatim>>=
+PredictData<-read.csv("HW02DataPredict.csv",header=TRUE)
+str(PredictData)
+predict(fit, PredictData, type="class")
+@
+\end{document}
