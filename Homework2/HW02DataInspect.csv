@@ -1,0 +1,11 @@
+Observation,A,B,ClassLabel
+1,T,F,+
+2,T,T,+
+3,T,T,+
+4,T,F,-
+5,T,T,+
+6,F,F,-
+7,F,F,-
+8,F,F,-
+9,T,T,-
+10,T,F,-

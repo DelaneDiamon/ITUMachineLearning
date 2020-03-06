@@ -212,4 +212,239 @@ observations:
 Levels: - +
 \end{Soutput}
 \end{Schunk}
+\subsection*{3a)}
+3) Consider the table given in the text on page 200 in the book exercise
+number five (copied below). It is a binary class problem. Would it be possible
+to create a model which would correctly classify this training data? If it is
+possible create a tree which gives the correct answer (either + or - ) for each
+training observation. Otherwise, give the reason that it is not possible to do
+so
+\begin{Schunk}
+\begin{Sinput}
+> InspectData<-read.csv("HW02DataInspect.csv",header=TRUE)
+> fit<-rpart(ClassLabel~A+B, 
++       data=InspectData, 
++       method="class",
++       control=rpart.control(minsplit=0,minbucket=0,maxdepth=5))
+> printcp(fit)
+\end{Sinput}
+\begin{Soutput}
+Classification tree:
+rpart(formula = ClassLabel ~ A + B, data = InspectData, method = "class", 
+    control = rpart.control(minsplit = 0, minbucket = 0, maxdepth = 5))
+
+Variables actually used in tree construction:
+[1] B
+
+Root node error: 4/10 = 0.4
+
+n= 10 
+
+    CP nsplit rel error xerror   xstd
+1 0.50      0       1.0      1 0.3873
+2 0.01      1       0.5      1 0.3873
+\end{Soutput}
+\begin{Sinput}
+> summary(fit)
+\end{Sinput}
+\begin{Soutput}
+Call:
+rpart(formula = ClassLabel ~ A + B, data = InspectData, method = "class", 
+    control = rpart.control(minsplit = 0, minbucket = 0, maxdepth = 5))
+  n= 10 
+
+    CP nsplit rel error xerror      xstd
+1 0.50      0       1.0      1 0.3872983
+2 0.01      1       0.5      1 0.3872983
+
+Variable importance
+ B  A 
+80 20 
+
+Node number 1: 10 observations,    complexity param=0.5
+  predicted class=-  expected loss=0.4  P(node) =1
+    class counts:     6     4
+   probabilities: 0.600 0.400 
+  left son=2 (6 obs) right son=3 (4 obs)
+  Primary splits:
+      B < 0.5 to the left,  improve=1.633333, (0 missing)
+      A < 0.5 to the left,  improve=1.371429, (0 missing)
+  Surrogate splits:
+      A < 0.5 to the left,  agree=0.7, adj=0.25, (0 split)
+
+Node number 2: 6 observations
+  predicted class=-  expected loss=0.1666667  P(node) =0.6
+    class counts:     5     1
+   probabilities: 0.833 0.167 
+
+Node number 3: 4 observations
+  predicted class=+  expected loss=0.25  P(node) =0.4
+    class counts:     1     3
+   probabilities: 0.250 0.750 
+\end{Soutput}
+\end{Schunk}
+\subsection*{4a)}
+ The sonar data has been divided into a training set sonar\_train.csv
+ and a test set "sonar\_test.csv". 
+ The file sonar\_test.csv should be used as the hold out set,
+ while the file sonar\_train.csv should be used to build the tree. 
+ Use R to compute the classification error on the test set 
+ when training on the training set for a tree of depth 5 
+ using control=rpart.control(maxdepth=5).
+ Remember that the 61st column is 
+ the response and the other 60 columns are the predictors. 
+ What is the error on the training set? What is the error on the test set?
+ What is the differences in these errors?
+
+\begin{Schunk}
+\begin{Sinput}
+> train<-read.csv("sonar_train.csv",header=FALSE)
+> dim(train)
+\end{Sinput}
+\begin{Soutput}
+[1] 130  61
+\end{Soutput}
+\begin{Sinput}
+> nxval <- 10  # this is 10 fold cross validation
+> ndepth <- 10 # this creates trees from depth 1 to depth 10
+> trainOutput <- matrix(0.0,nrow = ndepth, ncol = 2)#Set up the matrix to hold the scores
+> testOutput <- matrix(0.0,nrow =ndepth, ncol = 2)
+> I <- seq(from = 1, to = nrow(train))
+> for(idepth in 1:ndepth){
++ 	trainErr <- 0.0 
++ 	testErr <- 0.0   
++ 	for(ixval in seq(from =  1, to = nxval)){
++ 		Iout <- which(I%%nxval == ixval%%nxval)
++ 		trainIn <- train[-Iout,]
++ 		trainOut <- train[Iout,]
++ 		yin <- as.factor(trainIn[,61])
++ 		yout <- as.factor(trainOut[,61])
++ 		xin <- trainIn[,1:60]
++ 		xout <- trainOut[,1:60]
++ 		#class(xin)
++ 		fit <- rpart(yin~.,
++ 		             xin,
++ 		             control=rpart.control(maxdepth=idepth, 
++ 		                                   minsplit=2))
++ 		#Calculate the training error
++ 		trainErr <- trainErr + (1-sum(yin==predict(fit,
++ 		                                           xin,
++ 		                                           type="class"))/length(yin))
++ 		#Calculate the test error
++ 		testErr <- testErr + (1-sum(yout==predict(fit,
++ 		                                          xout,
++ 		                                          type="class"))/length(yout))
++ 	}
++ 	trainOutput[idepth,1] <- idepth
++ 	trainOutput[idepth,2] <- trainErr/nxval
++ 	testOutput[idepth,1] <- idepth
++ 	testOutput[idepth,2] <- testErr/nxval
++ }    
+> maxval = max(testOutput[,2])
+> plot(trainOutput, ylim=c(0,maxval),
++ 		main="Model Complexity",
++ 		xlab="Model Complexity = Tree Depth",
++ 		ylab="Prediction Error"
++ 	)
+> legend("right", c("test", "train"), col = c(2,1), pch=1,cex=0.6)
+> points(testOutput, col = 2)
+> index <- which.min(testOutput[,2]) 
+> testOutput[index,2]  #[1] 0.2230769
+\end{Sinput}
+\begin{Soutput}
+[1] 0.2230769
+\end{Soutput}
+\begin{Sinput}
+> index  #[1] 1
+\end{Sinput}
+\begin{Soutput}
+[1] 1
+\end{Soutput}
+\begin{Sinput}
+> index <- which.min(trainOutput[,2]) 
+> trainOutput[index,2]  #[1] 0.002564103
+\end{Sinput}
+\begin{Soutput}
+[1] 0.002564103
+\end{Soutput}
+\begin{Sinput}
+> index  #[1] 6
+\end{Sinput}
+\begin{Soutput}
+[1] 6
+\end{Soutput}
+\begin{Sinput}
+> #Plot for most complicated tree depth
+> plot(fit)
+> text(fit)
+> print(fit)
+\end{Sinput}
+\begin{Soutput}
+n= 117 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+ 1) root 117 56 -1 (0.52136752 0.47863248)  
+   2) V11>=0.17095 74 20 -1 (0.72972973 0.27027027)  
+     4) V17< 0.5562 50  6 -1 (0.88000000 0.12000000)  
+       8) V5< 0.13635 46  3 -1 (0.93478261 0.06521739)  
+        16) V49>=0.02475 39  0 -1 (1.00000000 0.00000000) *
+        17) V49< 0.02475 7  3 -1 (0.57142857 0.42857143)  
+          34) V9>=0.1707 4  0 -1 (1.00000000 0.00000000) *
+          35) V9< 0.1707 3  0 1 (0.00000000 1.00000000) *
+       9) V5>=0.13635 4  1 1 (0.25000000 0.75000000)  
+        18) V1>=0.0602 1  0 -1 (1.00000000 0.00000000) *
+        19) V1< 0.0602 3  0 1 (0.00000000 1.00000000) *
+     5) V17>=0.5562 24 10 1 (0.41666667 0.58333333)  
+      10) V41< 0.14555 6  0 -1 (1.00000000 0.00000000) *
+      11) V41>=0.14555 18  4 1 (0.22222222 0.77777778)  
+        22) V23>=0.8343 3  0 -1 (1.00000000 0.00000000) *
+        23) V23< 0.8343 15  1 1 (0.06666667 0.93333333)  
+          46) V20>=0.9784 1  0 -1 (1.00000000 0.00000000) *
+          47) V20< 0.9784 14  0 1 (0.00000000 1.00000000) *
+   3) V11< 0.17095 43  7 1 (0.16279070 0.83720930)  
+     6) V52>=0.0209 4  0 -1 (1.00000000 0.00000000) *
+     7) V52< 0.0209 39  3 1 (0.07692308 0.92307692)  
+      14) V19>=0.8351 5  2 -1 (0.60000000 0.40000000)  
+        28) V26< 0.6153 3  0 -1 (1.00000000 0.00000000) *
+        29) V26>=0.6153 2  0 1 (0.00000000 1.00000000) *
+      15) V19< 0.8351 34  0 1 (0.00000000 1.00000000) *
+\end{Soutput}
+\begin{Sinput}
+> post(fit,file="")
+> #  How did this complicated model do on the Test Set?
+> test<-read.csv("sonar_test.csv",header=FALSE)
+> testansw <- as.factor(test[,61])
+> testobv <- test[,1:60]
+> dum <- predict(fit,testobv)
+> yhat <- rep(0.0,nrow(dum))
+> for(i in 1:nrow(dum)){
++ 	yhat[i] <- 2*(which.max(dum[i,]) - 1) -1			
++ }
+> testError <- (1-sum(testansw==yhat)/length(testansw))
+> # testError = [1] 0.2948718
+> 
+> #Look at the plots for the best tree depth
+> test<-read.csv("sonar_test.csv",header=FALSE)
+> # Create model using training data set Decision Tree Depth = 1
+> yin <- as.factor(train[,61])
+> xin <- train[,1:60]
+> fitone <- rpart(yin~.,xin,control=rpart.control(maxdepth=1, minsplit=2))
+> plot(fitone)
+> text(fitone)
+> print(fitone)
+\end{Sinput}
+\begin{Soutput}
+n= 130 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+1) root 130 64 -1 (0.5076923 0.4923077)  
+  2) V11>=0.17095 79 21 -1 (0.7341772 0.2658228) *
+  3) V11< 0.17095 51  8 1 (0.1568627 0.8431373) *
+\end{Soutput}
+\end{Schunk}
+
 \end{document}

@@ -100,4 +100,123 @@ PredictData<-read.csv("HW02DataPredict.csv",header=TRUE)
 str(PredictData)
 predict(fit, PredictData, type="class")
 @
+\subsection*{3a)}
+3) Consider the table given in the text on page 200 in the book exercise
+number five (copied below). It is a binary class problem. Would it be possible
+to create a model which would correctly classify this training data? If it is
+possible create a tree which gives the correct answer (either + or - ) for each
+training observation. Otherwise, give the reason that it is not possible to do
+so
+<<label=Answer3a, echo=True,results=verbatim>>=
+InspectData<-read.csv("HW02DataInspect.csv",header=TRUE)
+fit<-rpart(ClassLabel~A+B, 
+      data=InspectData, 
+      method="class",
+      control=rpart.control(minsplit=0,minbucket=0,maxdepth=5))
+printcp(fit)
+summary(fit)
+@
+\subsection*{4a)}
+ The sonar data has been divided into a training set sonar\_train.csv
+ and a test set "sonar\_test.csv". 
+ The file sonar\_test.csv should be used as the hold out set,
+ while the file sonar\_train.csv should be used to build the tree. 
+ Use R to compute the classification error on the test set 
+ when training on the training set for a tree of depth 5 
+ using control=rpart.control(maxdepth=5).
+ Remember that the 61st column is 
+ the response and the other 60 columns are the predictors. 
+ What is the error on the training set? What is the error on the test set?
+ What is the differences in these errors?
+
+<<label=Answer4a, echo=True,results=verbatim>>=
+train<-read.csv("sonar_train.csv",header=FALSE)
+dim(train)
+nxval <- 10  # this is 10 fold cross validation
+ndepth <- 10 # this creates trees from depth 1 to depth 10
+trainOutput <- matrix(0.0,nrow = ndepth, ncol = 2)#Set up the matrix to hold the scores
+testOutput <- matrix(0.0,nrow =ndepth, ncol = 2)
+I <- seq(from = 1, to = nrow(train))
+for(idepth in 1:ndepth){
+	trainErr <- 0.0 
+	testErr <- 0.0   
+	for(ixval in seq(from =  1, to = nxval)){
+		Iout <- which(I%%nxval == ixval%%nxval)
+		trainIn <- train[-Iout,]
+		trainOut <- train[Iout,]
+		yin <- as.factor(trainIn[,61])
+		yout <- as.factor(trainOut[,61])
+		xin <- trainIn[,1:60]
+		xout <- trainOut[,1:60]
+		#class(xin)
+		fit <- rpart(yin~.,
+		             xin,
+		             control=rpart.control(maxdepth=idepth, 
+		                                   minsplit=2))
+		#Calculate the training error
+		trainErr <- trainErr + (1-sum(yin==predict(fit,
+		                                           xin,
+		                                           type="class"))/length(yin))
+		#Calculate the test error
+		testErr <- testErr + (1-sum(yout==predict(fit,
+		                                          xout,
+		                                          type="class"))/length(yout))
+	}
+	trainOutput[idepth,1] <- idepth
+	trainOutput[idepth,2] <- trainErr/nxval
+	testOutput[idepth,1] <- idepth
+	testOutput[idepth,2] <- testErr/nxval
+}    
+maxval = max(testOutput[,2])
+plot(trainOutput, ylim=c(0,maxval),
+		main="Model Complexity",
+		xlab="Model Complexity = Tree Depth",
+		ylab="Prediction Error"
+	)
+legend("right", c("test", "train"), col = c(2,1), pch=1,cex=0.6)
+points(testOutput, col = 2)
+
+
+
+index <- which.min(testOutput[,2]) 
+testOutput[index,2]  #[1] 0.2230769
+index  #[1] 1
+
+index <- which.min(trainOutput[,2]) 
+trainOutput[index,2]  #[1] 0.002564103
+index  #[1] 6
+
+#Plot for most complicated tree depth
+plot(fit)
+text(fit)
+print(fit)
+post(fit,file="")
+
+
+#  How did this complicated model do on the Test Set?
+test<-read.csv("sonar_test.csv",header=FALSE)
+testansw <- as.factor(test[,61])
+testobv <- test[,1:60]
+dum <- predict(fit,testobv)
+yhat <- rep(0.0,nrow(dum))
+for(i in 1:nrow(dum)){
+	yhat[i] <- 2*(which.max(dum[i,]) - 1) -1			
+}
+testError <- (1-sum(testansw==yhat)/length(testansw))
+# testError = [1] 0.2948718
+
+#Look at the plots for the best tree depth
+test<-read.csv("sonar_test.csv",header=FALSE)
+
+# Create model using training data set Decision Tree Depth = 1
+yin <- as.factor(train[,61])
+xin <- train[,1:60]
+fitone <- rpart(yin~.,xin,control=rpart.control(maxdepth=1, minsplit=2))
+
+
+plot(fitone)
+text(fitone)
+print(fitone)
+@
+
 \end{document}
