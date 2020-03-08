@@ -117,22 +117,27 @@ rpart.plot(q3_fit)
 predict(q3_fit, z, type ="class") #%80 accurate with the real data. 
 predict(q3_fit, z, type ="prob")
 @
-When we create a decision tree with Rpart as above figure, Rpart chose the Attribute B has a better split and splits is according to the attribute B. And the prediction according to this decision tree was \%80 percent accurate.
+When we create a decision tree with Rpart as above figure, Rpart chose the Attribute B has a better split and splits is according to the attribute B. And the prediction according to this decision tree was 80 percent accurate.
 
 \newpage
 {\bf\Large Question 4}
-The UC Irvine web site has many interesting data sets. The Sonar Data is described at the web site: http://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.names . The sonar data has been divided into a training set (sonar_train.csv) and a test set (sonar_test.csv). The file sonar_test.csv should be used as the hold out set, while the file sonar_train.csv should be used to build the tree. Use R to compute the classification error on the test set when training on the training set for a tree of depth 5 using control=rpart.control(maxdepth=5). Remember that the 61st column is the response and the other 60 columns are the predictors.
-What is the error on the training set? What is the error on the test set? What is the differences in these errors?
-Documentation for the rpart package can be found at
-http://cran.r-project.org/web/packages/rpart/rpart.pdf
-
+\linebreak 
 <<echo=TRUE,results=verbatim>>=
-sonar_train<-read.csv("sonar_train.csv",header = TRUE)
-sonar_test<-read.csv("sonar_test.csv",header = TRUE)
-y<-sonar_train[,length(sonar_train)]
-x<-sonar_train[,1:length(sonar_train)-1]
-sonar_fit<-rpart(y~.,x,control=rpart.control(maxdepth=5))
+sonar_train<-read.csv("sonar_train.csv",header = FALSE)
+y_train<-as.factor(sonar_train[,length(sonar_train)])
+x_train<-sonar_train[,1:length(sonar_train)-1]
 
+sonar_test<-read.csv("sonar_test.csv",header = FALSE)
+y_test<-as.factor(sonar_test[,length(sonar_test)])
+x_test<-sonar_test[,1:length(sonar_test)-1]
+
+sonar_fit<-rpart(y_train~.,x_train,control=rpart.control(maxdepth=5, minsplit = 2))
+print(sonar_fit)
+rpart.plot(sonar_fit)
+plotcp(sonar_fit)
+
+trainErr <- (1-sum(y_train==predict(sonar_fit,x_train,type="class"))/length(y_train))
+testErr <- (1-sum(y_test==predict(sonar_fit,x_test,type="class"))/length(y_test))
 @
 
 
