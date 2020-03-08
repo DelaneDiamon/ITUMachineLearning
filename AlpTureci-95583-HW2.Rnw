@@ -1,0 +1,139 @@
+\documentclass{article}
+\title{ITU - Machine Learning HW2}
+\author{Alp Tureci, MSc}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\addbibresource{sample.bib}
+\graphicspath{ {./} }
+
+\begin{document}
+\SweaveOpts{concordance=TRUE,prefix.string=Alp}
+\begin{figure}
+\begin{center}
+\includegraphics[width=8cm]{ITUlogo.png}
+\end{center}
+\end{figure}
+
+\begin{center}
+{\bf\Large Homework 2}
+\end{center}
+This document is prepared by Alp Tureci - 95583 as part of the homework assignment at ITU - Machine Learning class, taught by Patricia Hoffman
+\newpage
+{\bf\Large Question 1}
+
+\begin{enumerate}[label=\Alph*]
+\item{\textbf{Compute std, mean and median with default functions}}
+<<label=FirstChunk ,echo=TRUE,results=verbatim>>=
+setwd("/Users/atureci/Documents/ITU/MachineLearning/Week2/HW2")
+ages<-c(19, 23, 30, 30, 45, 25, 24, 20)
+ages.std<-sd(ages)
+ages.std
+ages.mean<-mean(ages)
+ages.mean
+ages.median<-median(ages)
+ages.median
+@
+
+\item{\textbf{Compute std, mean and median with manual R}}
+\begin{equation}
+\sigma=\sqrt{\frac{1}{N}\sum_{i=0}^{N}{(x_i-\mu)}^2}
+\end{equation}
+<<echo=TRUE,results=verbatim>>=
+ages.sum<-0
+for (age in ages) {
+  ages.sum<-ages.sum+age
+}
+ages.mean.manual<-ages.sum/(length(ages))
+ages.sorted<-sort(ages)
+ages.median.manual<-ages.sorted[(length(ages.sorted)+1)/2]
+ages.sd.manual<-sqrt((1/(length(ages)-1)*sum((ages-mean(ages))^2)))
+ages.mean.manual
+ages.sorted 
+ages.median.manual 
+ages.sd.manual 
+@
+
+
+\item{\textbf{Using R, how does the standard deviation from part a) change if you add 10 to all the values?}}
+<<echo=TRUE,results=verbatim>>=
+ages.plus10<-ages+10
+sd(ages.plus10)
+@
+No Change in Standard Deviation Observed!
+
+\item{\textbf{Using R, how does the standard deviation in part a) change if you multiply all the values by 100?}}
+<<echo=TRUE,results=verbatim>>=
+ages.times100<-ages*100
+sd(ages.times100)
+@
+Standard Deviation also multiplies 100 times. 
+
+\item{\textbf{Add new index as age 70. How does mean and median change?}}
+<<echo=TRUE,results=verbatim>>=
+ages<-append(ages, 70)
+ages.sorted<-sort(ages)
+mean(ages)
+median(ages)
+@
+Mean shifted right.
+Median picked the middle item which is 25. 
+
+\end{enumerate}
+
+\newpage
+{\bf\Large Question 2}
+<<echo=TRUE,results=verbatim>>=
+require("rpart")
+library(rpart.plot)
+train<-read.csv("table4_8pg199.txt",header=TRUE)
+train
+test<-read.csv("q2test.txt",header = TRUE)
+test
+y<-as.factor(train[,5])#class labels 0 or 1
+x<-train[,2:4]
+str(train)
+x;y
+is.numeric(train$a3)
+fit<-rpart(y~.,x,control=rpart.control(minsplit=0,minbucket=0,maxdepth=5))
+y
+predict(fit, test, type="class")
+predict(fit, type="prob")
+printcp(fit) # display the results
+summary(fit) # detailed summary of splits
+@
+\newpage
+{\bf\Large Question 3}
+<<echo=TRUE,results=verbatim, fig=TRUE>>=
+q3Data<-read.csv("q3.txt",header = TRUE)
+q3Data
+f<-as.factor(q3Data[,4])
+z<-q3Data[,2:3]
+q3_fit<-rpart(f~. , z, control = rpart.control(minsplit = 0,minbucket = 0, maxdepth = 5))
+rpart.plot(q3_fit)
+predict(q3_fit, z, type ="class") #%80 accurate with the real data. 
+predict(q3_fit, z, type ="prob")
+@
+When we create a decision tree with Rpart as above figure, Rpart chose the Attribute B has a better split and splits is according to the attribute B. And the prediction according to this decision tree was \%80 percent accurate.
+
+\newpage
+{\bf\Large Question 4}
+The UC Irvine web site has many interesting data sets. The Sonar Data is described at the web site: http://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.names . The sonar data has been divided into a training set (sonar_train.csv) and a test set (sonar_test.csv). The file sonar_test.csv should be used as the hold out set, while the file sonar_train.csv should be used to build the tree. Use R to compute the classification error on the test set when training on the training set for a tree of depth 5 using control=rpart.control(maxdepth=5). Remember that the 61st column is the response and the other 60 columns are the predictors.
+What is the error on the training set? What is the error on the test set? What is the differences in these errors?
+Documentation for the rpart package can be found at
+http://cran.r-project.org/web/packages/rpart/rpart.pdf
+
+<<echo=TRUE,results=verbatim>>=
+sonar_train<-read.csv("sonar_train.csv",header = TRUE)
+sonar_test<-read.csv("sonar_test.csv",header = TRUE)
+y<-sonar_train[,length(sonar_train)]
+x<-sonar_train[,1:length(sonar_train)-1]
+sonar_fit<-rpart(y~.,x,control=rpart.control(maxdepth=5))
+
+@
+
+
+\end{document}
