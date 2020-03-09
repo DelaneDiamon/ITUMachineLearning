@@ -140,5 +140,80 @@ trainErr <- (1-sum(y_train==predict(sonar_fit,x_train,type="class"))/length(y_tr
 testErr <- (1-sum(y_test==predict(sonar_fit,x_test,type="class"))/length(y_test))
 @
 
+\newpage
+{\bf\Large Question 5}
+\linebreak 
+
+
+<<echo=TRUE,results=verbatim, fig=TRUE>>=
+wine_data<-read.csv("winequality-red.csv",header = TRUE, sep=";")
+head(wine_data)
+observation_num<-nrow(wine_data)
+wine_data_sample<-wine_data[sample(observation_num, observation_num, replace = FALSE),]
+k =3
+wine_train = matrix(0, (k-1)*observation_num/k, ncol(wine_data))
+wine_train = wine_data_sample[1:(observation_num*(2/3)),]
+max_depth=10
+trainErrTot = rep(0, times = max_depth)
+crossErrTot = rep(0, times = max_depth)
+for(idepth in 1:max_depth){
+  pick = k
+  for(j in 1:k){
+    i_tmp = 1
+    for (i in 1:k){
+      if(i == pick){
+        wine_cross = wine_data_sample[((i-1)*observation_num/k+1):(observation_num*(i/k)),]
+      } else {
+        wine_train[((i_tmp-1)*observation_num/k+1):(observation_num*(i_tmp/k)),] = wine_data_sample[((i-1)*observation_num/k+1):(observation_num*(i/k)),]
+        i_tmp = i_tmp +1
+      }
+    }
+    pick = pick -1
+    y_wine = wine_train[,12]
+    x_wine = wine_train[,1:11]
+    fit<-rpart(y_wine~., x_wine, control = rpart.control(maxdepth = idepth))
+    errTrain = sqrt(sum((y_wine-predict(fit,x_wine))^2)/length(y_wine))
+    trainErrTot[idepth] = trainErrTot[idepth] + errTrain
+    
+    y_wine_cross = wine_cross[,12]
+    x_wine_cross = wine_data[,1:11]
+    
+    crossError = sqrt(sum((y_wine_cross-predict(fit, x_wine_cross))^2)/length(y_wine_cross))
+    crossErrTot[idepth] = crossErrTot[idepth] + crossError
+  }
+  
+  trainErrTot[idepth] = trainErrTot[idepth]/k
+  crossErrTot[idepth] = crossErrTot[idepth]/k
+  
+  if(idepth > 1 && crossErrTot[idepth] < crossErrTot[idepth -1]){
+    fit_save = fit_save
+    min_depth = idepth
+  }
+  if(idepth==5){
+    opt_fit = fit
+  }
+}
+
+plot(1:max_depth, trainErrTot)
+points(1:max_depth, crossErrTot, col='red')
+
+cat(crossErrTot, "\n", min_depth, "th cross validation error has the best value")
+print(opt_fit)
+
+plot(opt_fit)
+text(opt_fit)
+
+plot_frame = data.frame(wine_data_sample$alcohol, wine_data_sample$quality)
+
+correlation_wine = abs(cor(wine_data_sample[1,1:11], wine_data_sample$quality))
+correlation_wine
+
+plot(cor_wine[,1], xaxt = "n")
+axis(1, at=1:11, labels = row.names((correlation_wine)))
+
+plot_frame2 = data.frame(wine_data_sample$volatile.acidity, wine_data_sample$quality)
+plot(plot_frame2)
+plot(plot_frame)
+@
 
 \end{document}
