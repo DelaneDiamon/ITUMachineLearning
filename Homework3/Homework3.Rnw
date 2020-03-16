@@ -157,6 +157,119 @@ median(ridge_coef)
 summary(OLS_coef)
 @
 
+\section*{Question 3}
+3) This problem uses the Iris Data Set. It only involves the Versicolor and
+Virginica species (rows 51 through 150). Use cross validated ridge
+regression to classify these two species. Create and plot a ROC curve for
+this classification method.
+\section*{Answer 3}
+<<label=Answer3, echo=True,results=verbatim>>=
+rm(list=ls())
+library(datasets)
+library(dplyr)
+library(MASS)
+library("ridge")
+iris_orig_data = as.data.frame(iris)
+
+xlambda=rep(0, times = 30)
+for(i in seq(from = 0, to = 29)){
+  #
+  exp <- (+3 -4*(i/20))
+  xlambda[i+1] <- 10^exp
+}
+iris_data = iris_orig_data[51:150,]
+target = rep(0,100)
+str(iris_data)
+target[iris_data[,5]=="versicolor"] = 1
+target[iris_data[,5]!="versicolor"] = -1
+row.names(iris_data)<-NULL
+iris_data = cbind(iris_data, target)
+set_seed <- function(i) {
+  set.seed(i)
+  if (exists(".Random.seed"))  oldseed <- get(".Random.seed", .GlobalEnv)
+  if (exists(".Random.seed"))  assign(".Random.seed", oldseed, .GlobalEnv)
+}
+
+k = 10
+# 10-fold cross valiation is used.
+num_sample = nrow(iris_data)
+
+set_seed(123)
+iris_data = iris_data[sample(num_sample, num_sample, replace=FALSE),]
+iris_train = iris_data[1:(num_sample*((k-1)/k)),]
+iris_cross = iris_data[1:(num_sample*(1/k)),]
+
+error_train_total = matrix(0, nrow = length(xlambda), ncol = 1)
+error_cross_total = matrix(0, nrow = length(xlambda), ncol = 1)
+for(ilambda in 1:length(xlambda)){
+  pick = k #pick kth set
+  
+  error_train = 0
+  error_cross = 0
+  
+  for(j in 1:k){
+    i_tmp = 1
+    for(i in 1:k){
+      
+      #choose training set, and cross validation set 
+      if(i == pick){
+        iris_cross = iris_data[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
+      } else {
+        iris_train[((i_tmp-1)*num_sample/k+1):(num_sample*(i_tmp/k)), 
+                   ] = iris_data[((i-1)*num_sample/k+1):(num_sample*i/k),]
+        i_tmp = i_tmp + 1
+      }
+    }
+    pick = pick - 1
+    y_iris_train = iris_train[,6]
+    x_iris_train = iris_train[,1:4]
+    yx_iris_train = cbind(x_iris_train, y_iris_train)
+    
+    y_iris_cross = iris_cross[,6]
+    x_iris_cross = iris_cross[,1:4]
+    
+    iris_model = lm.ridge(y_iris_train~., yx_iris_train, lambda=xlambda[ilambda])
+    A = as.array(iris_model$coef[1:4]/iris_model$scales)
+    X_train = x_iris_train
+    for( i in seq(from = 1, to = ncol(x_iris_train))){
+      X_train[,i] = x_iris_train[,i] - iris_model$xm[i]
+    }
+    X_train=as.matrix(X_train)
+    yh = X_train%*%A + iris_model$ym
+
+    yhP = (yh >= 0.0)
+    yp = (y_iris_train >= 0.0)
+    error_train = error_train + sum(yhP != yp)/(length(y_iris_train)*k*0.00001/0.00001)
+    X_cross = x_iris_cross
+    for( i in seq(from = 1, to = ncol(x_iris_cross))){
+      X_cross[,i] = x_iris_cross[,i] - iris_model$xm[i]
+    }
+    X_cross=as.matrix(X_cross)
+    yh = X_cross%*%A + iris_model$ym
+    
+    
+    yhP = (yh >= 0.0)
+    yp = (y_iris_cross >= 0.0)
+    
+    error_cross = error_cross + sum(yhP != yp)/(length(y_iris_cross)*k*0.00001/0.00001)
+    
+  }
+  
+  error_train_total[ilambda,1] = error_train
+  error_cross_total[ilambda,1] = error_cross
+}
+
+min_iris_lambda <- xlambda[min(which(min(error_cross_total) == error_cross_total))]
+th_lambda = min(which(min(error_cross_total) == error_cross_total))
+cat(th_lambda, "th lambda", min_iris_lambda, "is optimal.")
+@
+<<label=Answer3plot1, echo=True,results=verbatim, fig=true>>=
+plot(1:length(xlambda),error_train_total[,1],
+     ylim=c(min(error_train_total, error_cross_total),
+            max(error_train_total, error_cross_total)))
+points(1:length(xlambda),error_cross_total[,1], col='red')
+@
+
 \section*{Question 4}
 
 4) See if you can improve on regression-based classification of the iris
@@ -213,12 +326,38 @@ iris_mutated_data_ordered <- iris_mutated_data[,
 # Train data
 ridge_x_iris = iris_mutated_data_ordered[,1:14]
 ridge_y_iris = iris_mutated_data_ordered[,15]
-
+str(ridge_x_iris)
+str(ridge_y_iris)
+summary(ridge_x_iris)
+summary(ridge_y_iris)
 # Making a model
-cv.out=cv.glmnet(as.matrix(ridge_x_iris), ridge_y_iris, alpha = 0, family='multinomial')
+grid=10^seq(10,-2,length=100)
+flowers = c(rep(1,50),rep(2,50), rep(3,50))
+library(data.table)
+library(mltools)
+x=one_hot(as.data.table(iris$Species))
+cv.out=cv.glmnet(
+  as.matrix(ridge_x_iris), 
+  x$V1_setosa, alpha = 0, 
+  labmda=grid)
+fit <- cv.out$glmnet.fit
+summary(fit)  
+
+opt_lambda = cv.out$lambda.min
+
 @
-<<label=Answer4plot1, echo=True,results=verbatim, fig=true>>=
-plot(cv.out)
-@
+
+\section*{Question 5}
+5) This is a multi-class problem. Consider the Glass Identification Data Set
+from the UC Irvine Data Repository. The Data is located at the web site:
+http://archive.ics.uci.edu/ml/datasets/Glass%2BIdentification
+This problem will only work with building and vehicle window glass (classes
+1,2 and 3), so it only uses the first 163 rows of data. (Ignore rows 164
+through 214) With this set up this is a three class problem. Use ridge
+regression to classify this data into the three classes: building windows float
+processed, building windows non float processed, and vehicle windows
+float processed
+
+
 
 \end{document}

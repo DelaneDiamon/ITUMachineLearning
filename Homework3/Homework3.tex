@@ -243,6 +243,132 @@ alcohol               0.33633856
 \end{Soutput}
 \end{Schunk}
 
+\section*{Question 3}
+3) This problem uses the Iris Data Set. It only involves the Versicolor and
+Virginica species (rows 51 through 150). Use cross validated ridge
+regression to classify these two species. Create and plot a ROC curve for
+this classification method.
+\section*{Answer 3}
+\begin{Schunk}
+\begin{Sinput}
+> rm(list=ls())
+> library(datasets)
+> library(dplyr)
+> library(MASS)
+> library("ridge")
+> iris_orig_data = as.data.frame(iris)
+> xlambda=rep(0, times = 30)
+> for(i in seq(from = 0, to = 29)){
++   #
++   exp <- (+3 -4*(i/20))
++   xlambda[i+1] <- 10^exp
++ }
+> iris_data = iris_orig_data[51:150,]
+> target = rep(0,100)
+> str(iris_data)
+\end{Sinput}
+\begin{Soutput}
+'data.frame':	100 obs. of  5 variables:
+ $ Sepal.Length: num  7 6.4 6.9 5.5 6.5 5.7 6.3 4.9 6.6 5.2 ...
+ $ Sepal.Width : num  3.2 3.2 3.1 2.3 2.8 2.8 3.3 2.4 2.9 2.7 ...
+ $ Petal.Length: num  4.7 4.5 4.9 4 4.6 4.5 4.7 3.3 4.6 3.9 ...
+ $ Petal.Width : num  1.4 1.5 1.5 1.3 1.5 1.3 1.6 1 1.3 1.4 ...
+ $ Species     : Factor w/ 3 levels "setosa","versicolor",..: 2 2 2 2 2 2 2 2 2 2 ...
+\end{Soutput}
+\begin{Sinput}
+> target[iris_data[,5]=="versicolor"] = 1
+> target[iris_data[,5]!="versicolor"] = -1
+> row.names(iris_data)<-NULL
+> iris_data = cbind(iris_data, target)
+> set_seed <- function(i) {
++   set.seed(i)
++   if (exists(".Random.seed"))  oldseed <- get(".Random.seed", .GlobalEnv)
++   if (exists(".Random.seed"))  assign(".Random.seed", oldseed, .GlobalEnv)
++ }
+> k = 10
+> # 10-fold cross valiation is used.
+> num_sample = nrow(iris_data)
+> set_seed(123)
+> iris_data = iris_data[sample(num_sample, num_sample, replace=FALSE),]
+> iris_train = iris_data[1:(num_sample*((k-1)/k)),]
+> iris_cross = iris_data[1:(num_sample*(1/k)),]
+> error_train_total = matrix(0, nrow = length(xlambda), ncol = 1)
+> error_cross_total = matrix(0, nrow = length(xlambda), ncol = 1)
+> for(ilambda in 1:length(xlambda)){
++   pick = k #pick kth set
++   
++   error_train = 0
++   error_cross = 0
++   
++   for(j in 1:k){
++     i_tmp = 1
++     for(i in 1:k){
++       
++       #choose training set, and cross validation set 
++       if(i == pick){
++         iris_cross = iris_data[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
++       } else {
++         iris_train[((i_tmp-1)*num_sample/k+1):(num_sample*(i_tmp/k)), 
++                    ] = iris_data[((i-1)*num_sample/k+1):(num_sample*i/k),]
++         i_tmp = i_tmp + 1
++       }
++     }
++     pick = pick - 1
++     y_iris_train = iris_train[,6]
++     x_iris_train = iris_train[,1:4]
++     yx_iris_train = cbind(x_iris_train, y_iris_train)
++     
++     y_iris_cross = iris_cross[,6]
++     x_iris_cross = iris_cross[,1:4]
++     
++     iris_model = lm.ridge(y_iris_train~., yx_iris_train, lambda=xlambda[ilambda])
++     A = as.array(iris_model$coef[1:4]/iris_model$scales)
++     X_train = x_iris_train
++     for( i in seq(from = 1, to = ncol(x_iris_train))){
++       X_train[,i] = x_iris_train[,i] - iris_model$xm[i]
++     }
++     X_train=as.matrix(X_train)
++     yh = X_train%*%A + iris_model$ym
++ 
++     yhP = (yh >= 0.0)
++     yp = (y_iris_train >= 0.0)
++     error_train = error_train + sum(yhP != yp)/(length(y_iris_train)*k*0.00001/0.00001)
++     X_cross = x_iris_cross
++     for( i in seq(from = 1, to = ncol(x_iris_cross))){
++       X_cross[,i] = x_iris_cross[,i] - iris_model$xm[i]
++     }
++     X_cross=as.matrix(X_cross)
++     yh = X_cross%*%A + iris_model$ym
++     
++     
++     yhP = (yh >= 0.0)
++     yp = (y_iris_cross >= 0.0)
++     
++     error_cross = error_cross + sum(yhP != yp)/(length(y_iris_cross)*k*0.00001/0.00001)
++     
++   }
++   
++   error_train_total[ilambda,1] = error_train
++   error_cross_total[ilambda,1] = error_cross
++ }
+> min_iris_lambda <- xlambda[min(which(min(error_cross_total) == error_cross_total))]
+> th_lambda = min(which(min(error_cross_total) == error_cross_total))
+> cat(th_lambda, "th lambda", min_iris_lambda, "is optimal.")
+\end{Sinput}
+\begin{Soutput}
+11 th lambda 10 is optimal.
+\end{Soutput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> plot(1:length(xlambda),error_train_total[,1],
++      ylim=c(min(error_train_total, error_cross_total),
++             max(error_train_total, error_cross_total)))
+> points(1:length(xlambda),error_cross_total[,1], col='red')
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-Answer3plot1}
+
 \section*{Question 4}
 
 4) See if you can improve on regression-based classification of the iris
@@ -296,15 +422,124 @@ adventurous, investigate the function mutate in the package plyr
 > # Train data
 > ridge_x_iris = iris_mutated_data_ordered[,1:14]
 > ridge_y_iris = iris_mutated_data_ordered[,15]
-> # Making a model
-> cv.out=cv.glmnet(as.matrix(ridge_x_iris), ridge_y_iris, alpha = 0, family='multinomial')
+> str(ridge_x_iris)
 \end{Sinput}
-\end{Schunk}
-\begin{Schunk}
+\begin{Soutput}
+'data.frame':	150 obs. of  14 variables:
+ $ Sepal.Length              : num  5.1 4.9 4.7 4.6 5 5.4 4.6 5 4.4 4.9 ...
+ $ Sepal.Width               : num  3.5 3 3.2 3.1 3.6 3.9 3.4 3.4 2.9 3.1 ...
+ $ Petal.Length              : num  1.4 1.4 1.3 1.5 1.4 1.7 1.4 1.5 1.4 1.5 ...
+ $ Petal.Width               : num  0.2 0.2 0.2 0.2 0.2 0.4 0.3 0.2 0.2 0.1 ...
+ $ Sepal.Length_Squared      : num  26 24 22.1 21.2 25 ...
+ $ Sepal.Width_Squared       : num  12.25 9 10.24 9.61 12.96 ...
+ $ Petal.Length_Squared      : num  1.96 1.96 1.69 2.25 1.96 2.89 1.96 2.25 1.96 2.25 ...
+ $ Petal.Width_Squared       : num  0.04 0.04 0.04 0.04 0.04 0.16 0.09 0.04 0.04 0.01 ...
+ $ Sepal.Length_Doubled      : num  10.2 9.8 9.4 9.2 10 10.8 9.2 10 8.8 9.8 ...
+ $ Sepal.Width_Doubled       : num  7 6 6.4 6.2 7.2 7.8 6.8 6.8 5.8 6.2 ...
+ $ Petal.Length_Doubled      : num  2.8 2.8 2.6 3 2.8 3.4 2.8 3 2.8 3 ...
+ $ Petal.Width_Doubled       : num  0.4 0.4 0.4 0.4 0.4 0.8 0.6 0.4 0.4 0.2 ...
+ $ Sepal.Length_x_Sepal.Width: num  17.8 14.7 15 14.3 18 ...
+ $ Petal.Length_x_Petal.Width: num  0.28 0.28 0.26 0.3 0.28 0.68 0.42 0.3 0.28 0.15 ...
+\end{Soutput}
 \begin{Sinput}
-> plot(cv.out)
+> str(ridge_y_iris)
+\end{Sinput}
+\begin{Soutput}
+ Factor w/ 3 levels "setosa","versicolor",..: 1 1 1 1 1 1 1 1 1 1 ...
+\end{Soutput}
+\begin{Sinput}
+> summary(ridge_x_iris)
+\end{Sinput}
+\begin{Soutput}
+  Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
+ Min.   :4.300   Min.   :2.000   Min.   :1.000   Min.   :0.100  
+ 1st Qu.:5.100   1st Qu.:2.800   1st Qu.:1.600   1st Qu.:0.300  
+ Median :5.800   Median :3.000   Median :4.350   Median :1.300  
+ Mean   :5.843   Mean   :3.057   Mean   :3.758   Mean   :1.199  
+ 3rd Qu.:6.400   3rd Qu.:3.300   3rd Qu.:5.100   3rd Qu.:1.800  
+ Max.   :7.900   Max.   :4.400   Max.   :6.900   Max.   :2.500  
+ Sepal.Length_Squared Sepal.Width_Squared Petal.Length_Squared
+ Min.   :18.49        Min.   : 4.000      Min.   : 1.00       
+ 1st Qu.:26.01        1st Qu.: 7.840      1st Qu.: 2.56       
+ Median :33.64        Median : 9.000      Median :18.93       
+ Mean   :34.83        Mean   : 9.536      Mean   :17.22       
+ 3rd Qu.:40.96        3rd Qu.:10.890      3rd Qu.:26.01       
+ Max.   :62.41        Max.   :19.360      Max.   :47.61       
+ Petal.Width_Squared Sepal.Length_Doubled Sepal.Width_Doubled
+ Min.   :0.010       Min.   : 8.60        Min.   :4.000      
+ 1st Qu.:0.090       1st Qu.:10.20        1st Qu.:5.600      
+ Median :1.690       Median :11.60        Median :6.000      
+ Mean   :2.016       Mean   :11.69        Mean   :6.115      
+ 3rd Qu.:3.240       3rd Qu.:12.80        3rd Qu.:6.600      
+ Max.   :6.250       Max.   :15.80        Max.   :8.800      
+ Petal.Length_Doubled Petal.Width_Doubled Sepal.Length_x_Sepal.Width
+ Min.   : 2.000       Min.   :0.200       Min.   :10.00             
+ 1st Qu.: 3.200       1st Qu.:0.600       1st Qu.:15.66             
+ Median : 8.700       Median :2.600       Median :17.66             
+ Mean   : 7.516       Mean   :2.399       Mean   :17.82             
+ 3rd Qu.:10.200       3rd Qu.:3.600       3rd Qu.:20.32             
+ Max.   :13.800       Max.   :5.000       Max.   :30.02             
+ Petal.Length_x_Petal.Width
+ Min.   : 0.110            
+ 1st Qu.: 0.420            
+ Median : 5.615            
+ Mean   : 5.794            
+ 3rd Qu.: 9.690            
+ Max.   :15.870            
+\end{Soutput}
+\begin{Sinput}
+> summary(ridge_y_iris)
+\end{Sinput}
+\begin{Soutput}
+    setosa versicolor  virginica 
+        50         50         50 
+\end{Soutput}
+\begin{Sinput}
+> # Making a model
+> grid=10^seq(10,-2,length=100)
+> flowers = c(rep(1,50),rep(2,50), rep(3,50))
+> library(data.table)
+> library(mltools)
+> x=one_hot(as.data.table(iris$Species))
+> cv.out=cv.glmnet(
++   as.matrix(ridge_x_iris), 
++   x$V1_setosa, alpha = 0, 
++   labmda=grid)
+> fit <- cv.out$glmnet.fit
+> summary(fit)  
+\end{Sinput}
+\begin{Soutput}
+          Length Class     Mode   
+a0         100   -none-    numeric
+beta      1400   dgCMatrix S4     
+df         100   -none-    numeric
+dim          2   -none-    numeric
+lambda     100   -none-    numeric
+dev.ratio  100   -none-    numeric
+nulldev      1   -none-    numeric
+npasses      1   -none-    numeric
+jerr         1   -none-    numeric
+offset       1   -none-    logical
+call         5   -none-    call   
+nobs         1   -none-    numeric
+\end{Soutput}
+\begin{Sinput}
+> opt_lambda = cv.out$lambda.min
+> 
 \end{Sinput}
 \end{Schunk}
-\includegraphics{Dmitrii-Answer4plot1}
+
+\section*{Question 5}
+5) This is a multi-class problem. Consider the Glass Identification Data Set
+from the UC Irvine Data Repository. The Data is located at the web site:
+http://archive.ics.uci.edu/ml/datasets/Glass%2BIdentification
+This problem will only work with building and vehicle window glass (classes
+1,2 and 3), so it only uses the first 163 rows of data. (Ignore rows 164
+through 214) With this set up this is a three class problem. Use ridge
+regression to classify this data into the three classes: building windows float
+processed, building windows non float processed, and vehicle windows
+float processed
+
+
 
 \end{document}
