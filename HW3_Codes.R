@@ -11,11 +11,11 @@ wine_data<-read.csv("winequality-red.csv",header = TRUE, sep=";")
 scaled_wine_data<-cbind(scale(wine_data))
 
 #function_ols <- function(wine_data){
-  wine_train<-wine_data[1:1400,]
+  wine_train<-scaled_wine_data[1:1400,]
   x_wine_train<-wine_train[,1:11]
   y_wine_train<-wine_train[,12]
   
-  wine_test<-wine_data[1401:dim(wine_data)[1],]
+  wine_test<-scaled_wine_data[1401:dim(scaled_wine_data)[1],]
   x_wine_test<-wine_test[,1:11]
   y_wine_test<-wine_test[,12]
   
@@ -100,7 +100,8 @@ df=data.frame(index,test_y_wine, predicted_OLS_quality, predicted_Ridge_quality)
 dfplot <- df %>% gather(key, value, -index)
 
 ggplot(dfplot, mapping = aes(x = index, y = value, color = key) ) + geom_line()
-diff_OLS_Ridge = predicted_OLS_quality - predicted_Ridge_quality
+
+#diff_OLS_Ridge = predicted_OLS_quality - predicted_Ridge_quality
 
 # Compare the coefficients resulting from the ridge regression 
 # with the coefficients that were obtained in problem 1. 

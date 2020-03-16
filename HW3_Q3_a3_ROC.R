@@ -1,8 +1,7 @@
+#Q3a
+
 rm(list=ls())	
-
-library(MASS)
-
-
+library("ridge")
 xlambda=rep(0, times = 30)
 for(i in seq(from = 0, to = 29)){
   #
@@ -10,11 +9,16 @@ for(i in seq(from = 0, to = 29)){
   xlambda[i+1] <- 10^exp
 }
 
+library(MASS)
+#iris_data = read.table("/Users/atureci/Documents/ITU/MachineLearning/Week3/HW3-AlpTureci-95583/iris.csv", sep=",", header=FALSE)
 # we only need Versicolor and Virginica data.
-iris_data = iris[51:150,]
+write.table(iris, file = "iris.csv", col.names = FALSE, row.names = FALSE, sep = ",")
+iris_data<-read.table("iris.csv", header = FALSE, sep = ",")
+
+iris_data = iris_data[51:150,]
 target = rep(0,100)
-target[iris_data[,5]=="Iris-versicolor"] = 1
-target[iris_data[,5]!="Iris-versicolor"] = -1
+target[iris_data[,5]=="versicolor"] = 1
+target[iris_data[,5]!="versicolor"] = -1
 row.names(iris_data)<-NULL
 iris_data = cbind(iris_data, target)
 set_seed <- function(i) {
@@ -27,8 +31,7 @@ k = 10
 # 10-fold cross valiation is used.
 num_sample = nrow(iris_data)
 
-set_seed(pi)
-#set.seed(pi)
+set_seed(123)
 iris_data = iris_data[sample(num_sample, num_sample, replace=FALSE),]
 iris_train = iris_data[1:(num_sample*((k-1)/k)),]
 iris_cross = iris_data[1:(num_sample*(1/k)),]
@@ -101,3 +104,47 @@ plot(1:length(xlambda),error_train_total[,1],
      ylim=c(min(error_train_total, error_cross_total),
             max(error_train_total, error_cross_total)))
 points(1:length(xlambda),error_cross_total[,1], col='red')
+
+##Q3b
+th_list=seq(from=-0.9000, to=0.9000, by=0.1000)
+
+tp = rep(0,times=length(th_list))
+fn = rep(0,times=length(th_list))
+fp = rep(0,times=length(th_list))
+tn = rep(0,times=length(th_list))
+
+y_iris_all = iris_data[,6]
+x_iris_all = iris_data[,1:4]
+yx_iris_all = cbind(x_iris_all, y_iris_all)
+
+iris_th_model = lm.ridge(y_iris_all~., yx_iris_all, lambda=min_iris_lambda)
+A = as.array(iris_th_model$coef[1:4]/iris_th_model$scales)
+X_all = x_iris_all
+for( i in seq(from = 1, to = ncol(x_iris_all))){
+  X_all[,i] = x_iris_all[,i] - iris_th_model$xm[i]
+}
+X_all=as.matrix(X_all)
+yh = X_all%*%A + iris_th_model$ym
+
+
+ith = 1
+for(th in th_list){
+  
+  tp[ith] = sum( (yh >= th) & (y_iris_all > 0) )
+  fn[ith] = sum( (yh < th) & (y_iris_all > 0) )
+  fp[ith] = sum( (yh >= th) & (y_iris_all < 0) )
+  tn[ith] = sum( (yh < th) & (y_iris_all < 0) )
+  
+  ith = ith + 1
+}
+
+tpr = tp/(tp+fn)
+fpr = fp/(fp+tn)
+
+plot(fpr,tpr)
+lines(spline(fpr,tpr,n=200), col="red")
+points(fpr[10],tpr[10],pch = 19, col="blue")
+
+cat(th_list[10], " is optimal threshold.")
+
+

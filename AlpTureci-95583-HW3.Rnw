@@ -1,0 +1,580 @@
+\documentclass{article}
+\title{ITU - Machine Learning HW3}
+\author{Alp Tureci, MSc}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\addbibresource{sample.bib}
+\graphicspath{ {./} }
+
+\begin{document}
+\SweaveOpts{concordance=TRUE,prefix.string=Alp}
+\begin{figure}
+\begin{center}
+\includegraphics[width=8cm]{ITUlogo.png}
+\end{center}
+\end{figure}
+
+
+\begin{center}
+{\bf\Large Homework 3}
+\end{center}
+This document is prepared by Alp Tureci - 95583 as part of the homework assignment at ITU - Machine Learning class, taught by Patricia Hoffman
+
+<<echo=FALSE,results=hide>>=
+setwd('/Users/atureci/Documents/ITU/MachineLearning/Week3/HW3-AlpTureci-95583')
+library(ISLR)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("glmnet")
+library(glmnet)
+set.seed(pi)
+@
+
+
+\newpage
+{\bf\Large Question 1}
+
+1) Once again check out wine quality data set described in the web page
+below:
+http://archive.ics.uci.edu/ml/machine-learning-databases/winequality/
+winequality.names
+Remember the Red Wine data set (winequality-red.csv) contains 1599
+observations of 11 attributes. The median score of the wine tasters is given in
+the last column. Note also that the delimiter used in this file is a semi colon
+and not a comma. This problem is to create an ordinary least squares linear
+model (use the lm function in R) for this data set using the first 1400
+observations. Don’t forget to scale each column before you create the model.
+Next check the model’s performance on the last 199 observations. How well
+did the model predict the results for the last 199 observations? What measure
+did you use to evaluate how well the model did this prediction? Next use the
+model to predict the results for the whole data set and measure how well your
+model worked. (hint: use the r function lm and the regression example from
+class)
+
+<<echo=TRUE, results=verbatim>>=
+wine_data<-read.csv("winequality-red.csv",header = TRUE, sep=";")
+scaled_wine_data<-cbind(scale(wine_data))
+
+#function_ols <- function(wine_data){
+  wine_train<-wine_data[1:1400,]
+  x_wine_train<-wine_train[,1:11]
+  y_wine_train<-wine_train[,12]
+  
+  wine_test<-wine_data[1401:dim(wine_data)[1],]
+  x_wine_test<-wine_test[,1:11]
+  y_wine_test<-wine_test[,12]
+  
+  #Don’t forget to scale each column before you create the model.??
+  lm_wine_train<-lm(y_wine_train~., data = as.data.frame(x_wine_train))
+  OLS_coef <- coef(lm_wine_train)
+  
+  
+  #How well did the model predict the results for the last 199 observations?
+  predicted_OLS_quality<-predict(lm_wine_train, newdata = as.data.frame(x_wine_test))
+  dY<-y_wine_test - predicted_OLS_quality
+  ols_testErr <- sqrt(sum(dY*dY))/(length(y_wine_test))	
+  paste("using OLS the estimated test error = ", ols_testErr)
+  
+  #What measure did you use to evaluate how well the model did this prediction?
+  # Next use the model to predict the results for the whole data set 
+  # and measure how well your model worked. 
+  # (hint: use the r function lm and the regression example from class)
+  wine_data_x<-wine_data[,1:11]
+  wine_data_y<-wine_data[,12]
+  
+  lm_wine_data<-predict(lm_wine_train, newdata = as.data.frame(wine_data_x))
+  dYData <- wine_data_y - lm_wine_data
+  dataErr <- sqrt(sum(dYData*dYData))/(length(wine_data_y))
+  
+  paste("using OLR the estimated test error = ",dataErr)
+  #lm_wine_data
+  summary(lm_wine_data)
+@
+
+
+\newpage
+{\bf\Large Question 2}
+2) Perform a ridge regression on the wine quality data set from problem 1
+using only the first 1400 observations. Compare the results of applying the
+ridge regression model to the last 199 observations with the results of
+applying the ordinary least square model to these observations. Compare the
+coefficients resulting from the ridge regression with the coefficients that were
+obtained in problem 1. What conclusions can you make from this
+comparison?
+
+<<echo=TRUE, results=verbatim, fig=TRUE>>=
+# QUESTION 2
+# Perform a ridge regression on the wine quality data set 
+# from problem 1 using only the first 1400 observations.
+
+
+#grid=10^seq(10,-2,length=100)
+wine_data<-read.csv("winequality-red.csv",header = TRUE, sep=";")
+
+ridge_wine_train = wine_data[1:1400,]
+ridge_x_wine_train = ridge_wine_train[,1:11]
+ridge_y_wine_train = ridge_wine_train[,12]
+
+test_wine_ridge = wine_data[1401:dim(wine_data)[1],]
+test_x_wine = test_wine_ridge[,1:11]
+test_y_wine = test_wine_ridge[,12]
+
+cv.out=cv.glmnet(as.matrix(ridge_x_wine_train), ridge_y_wine_train, alpha = 0 )
+plot(cv.out)
+bestlambda=cv.out$lambda.min
+bestlambda
+
+#Make fair comraison of Error
+ridgeMod=glmnet(as.matrix(ridge_x_wine_train), ridge_y_wine_train, alpha = 0, lambda = bestlambda)
+predicted_Ridge_quality= predict(ridgeMod, newx = as.matrix(test_x_wine))
+ridge_testErr = sqrt(sum((test_y_wine - predicted_Ridge_quality)^2))/length(predicted_Ridge_quality)
+ridge_coef<-coef(ridgeMod)
+
+paste("using Ridge the estimated test error = ", ridge_testErr)
+paste("using Ridge Lambda = ", bestlambda, "alpha = 0")
+
+# Compare the results of applying the ridge regression model 
+# to the last 199 observations with the results of
+# applying the ordinary least square model to these observations
+# Predicted_OLS - Predicted_Ridge
+# Plot all 3 Vars
+index = c(1401:dim(wine_data)[1])
+df=data.frame(index,test_y_wine, predicted_OLS_quality, predicted_Ridge_quality)
+
+dfplot <- df %>% gather(key, value, -index)
+
+#I COULDN'T PLOT THIS GRAPH ON SWEAVE, BUT I PLOTS IT ON R SCRIPT.
+ggplot(dfplot, mapping = aes(x = index, y = value, color = key) ) + geom_line()
+diff_OLS_Ridge = predicted_OLS_quality - predicted_Ridge_quality
+
+# Compare the coefficients resulting from the ridge regression 
+# with the coefficients that were obtained in problem 1. 
+# What conclusions can you make from this comparison?
+summary(ridge_coef)
+mean(ridge_coef)
+median(ridge_coef)
+summary(OLS_coef)
+@
+
+\newpage
+{\bf\Large Question 3}
+3) This problem uses the Iris Data Set. It only involves the Versicolor and
+Virginica species (rows 51 through 150). Use cross validated ridge
+regression to classify these two species. Create and plot a ROC curve for
+this classification method.
+
+<<echo=TRUE, results=verbatim, fig=TRUE>>=
+#Q3a
+
+rm(list=ls())	
+library("ridge")
+xlambda=rep(0, times = 30)
+for(i in seq(from = 0, to = 29)){
+  #
+  exp <- (+3 -4*(i/20))
+  xlambda[i+1] <- 10^exp
+}
+
+library(MASS)
+#iris_data = read.table("/Users/atureci/Documents/ITU/MachineLearning/Week3/HW3-AlpTureci-95583/iris.csv", sep=",", header=FALSE)
+# we only need Versicolor and Virginica data.
+write.table(iris, file = "iris.csv", col.names = FALSE, row.names = FALSE, sep = ",")
+iris_data<-read.table("iris.csv", header = FALSE, sep = ",")
+
+iris_data = iris_data[51:150,]
+target = rep(0,100)
+target[iris_data[,5]=="versicolor"] = 1
+target[iris_data[,5]!="versicolor"] = -1
+row.names(iris_data)<-NULL
+iris_data = cbind(iris_data, target)
+set_seed <- function(i) {
+  set.seed(i)
+  if (exists(".Random.seed"))  oldseed <- get(".Random.seed", .GlobalEnv)
+  if (exists(".Random.seed"))  assign(".Random.seed", oldseed, .GlobalEnv)
+}
+
+k = 10
+# 10-fold cross valiation is used.
+num_sample = nrow(iris_data)
+
+set_seed(123)
+iris_data = iris_data[sample(num_sample, num_sample, replace=FALSE),]
+iris_train = iris_data[1:(num_sample*((k-1)/k)),]
+iris_cross = iris_data[1:(num_sample*(1/k)),]
+
+error_train_total = matrix(0, nrow = length(xlambda), ncol = 1)
+error_cross_total = matrix(0, nrow = length(xlambda), ncol = 1)
+for(ilambda in 1:length(xlambda)){
+  pick = k #pick kth set
+  
+  error_train = 0
+  error_cross = 0
+  
+  for(j in 1:k){
+    i_tmp = 1
+    for(i in 1:k){
+      
+      #choose training set, and cross validation set 
+      if(i == pick){
+        iris_cross = iris_data[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
+      } else {
+        iris_train[((i_tmp-1)*num_sample/k+1):(num_sample*(i_tmp/k)), 
+                   ] = iris_data[((i-1)*num_sample/k+1):(num_sample*i/k),]
+        i_tmp = i_tmp + 1
+      }
+    }
+    pick = pick - 1
+    y_iris_train = iris_train[,6]
+    x_iris_train = iris_train[,1:4]
+    yx_iris_train = cbind(x_iris_train, y_iris_train)
+    
+    y_iris_cross = iris_cross[,6]
+    x_iris_cross = iris_cross[,1:4]
+    
+    iris_model = lm.ridge(y_iris_train~., yx_iris_train, lambda=xlambda[ilambda])
+    A = as.array(iris_model$coef[1:4]/iris_model$scales)
+    X_train = x_iris_train
+    for( i in seq(from = 1, to = ncol(x_iris_train))){
+      X_train[,i] = x_iris_train[,i] - iris_model$xm[i]
+    }
+    X_train=as.matrix(X_train)
+    yh = X_train%*%A + iris_model$ym
+    
+    yhP = (yh >= 0.0)
+    yp = (y_iris_train >= 0.0)
+    error_train = error_train + sum(yhP != yp)/(length(y_iris_train)*k*0.00001/0.00001)
+    X_cross = x_iris_cross
+    for( i in seq(from = 1, to = ncol(x_iris_cross))){
+      X_cross[,i] = x_iris_cross[,i] - iris_model$xm[i]
+    }
+    X_cross=as.matrix(X_cross)
+    yh = X_cross%*%A + iris_model$ym
+    
+    
+    yhP = (yh >= 0.0)
+    yp = (y_iris_cross >= 0.0)
+    
+    error_cross = error_cross + sum(yhP != yp)/(length(y_iris_cross)*k*0.00001/0.00001)
+    
+  }
+  
+  error_train_total[ilambda,1] = error_train
+  error_cross_total[ilambda,1] = error_cross
+}
+
+min_iris_lambda <- xlambda[min(which(min(error_cross_total) == error_cross_total))]
+th_lambda = min(which(min(error_cross_total) == error_cross_total))
+cat(th_lambda, "th lambda", min_iris_lambda, "is optimal.")
+
+plot(1:length(xlambda),error_train_total[,1],
+     ylim=c(min(error_train_total, error_cross_total),
+            max(error_train_total, error_cross_total)))
+points(1:length(xlambda),error_cross_total[,1], col='red')
+
+##Q3b
+th_list=seq(from=-0.9000, to=0.9000, by=0.1000)
+
+tp = rep(0,times=length(th_list))
+fn = rep(0,times=length(th_list))
+fp = rep(0,times=length(th_list))
+tn = rep(0,times=length(th_list))
+
+y_iris_all = iris_data[,6]
+x_iris_all = iris_data[,1:4]
+yx_iris_all = cbind(x_iris_all, y_iris_all)
+
+iris_th_model = lm.ridge(y_iris_all~., yx_iris_all, lambda=min_iris_lambda)
+A = as.array(iris_th_model$coef[1:4]/iris_th_model$scales)
+X_all = x_iris_all
+for( i in seq(from = 1, to = ncol(x_iris_all))){
+  X_all[,i] = x_iris_all[,i] - iris_th_model$xm[i]
+}
+X_all=as.matrix(X_all)
+yh = X_all%*%A + iris_th_model$ym
+
+
+ith = 1
+for(th in th_list){
+  
+  tp[ith] = sum( (yh >= th) & (y_iris_all > 0) )
+  fn[ith] = sum( (yh < th) & (y_iris_all > 0) )
+  fp[ith] = sum( (yh >= th) & (y_iris_all < 0) )
+  tn[ith] = sum( (yh < th) & (y_iris_all < 0) )
+  
+  ith = ith + 1
+}
+
+tpr = tp/(tp+fn)
+fpr = fp/(fp+tn)
+
+plot(fpr,tpr)
+lines(spline(fpr,tpr,n=200), col="red")
+points(fpr[10],tpr[10],pch = 19, col="blue")
+
+cat(th_list[10], " is optimal threshold.")
+
+@
+
+\newpage
+{\bf\Large Question 4}
+4) See if you can improve on regression-based classification of the iris data that we did in class. Classify the iris data set with second degree terms added using a ridge regression. (ie supplement the original 4 attributes x1, x2, x3, and x4 by including the 10 second degree terms ( x1*x1, x1*x2, x1*x3, … ) for a total of 14 attributes.) Use multiclass to classify the data and then compare the results with the results obtained in class.
+
+It is fine to use brute force to add these attributes. For those who are adventurous, investigate the function mutate in the package plyr.
+
+<<echo=TRUE, results=verbatim, fig=TRUE>>=
+#QUESTION4
+
+# 4) See if you can improve on regression-based classification of the iris data 
+# that we did in class. Classify the iris data set with second degree terms 
+# added using a ridge regression. 
+# (ie supplement the original 4 attributes x1, x2, x3, and x4
+# by including the 10 second degree terms ( x1*x1, x1*x2, x1*x3, … ) 
+# for a total of 14 attributes.) Use multiclass to classify the data and then 
+# compare the results with the results obtained in class.
+
+secondDegreeTerms = x_iris_all
+secondDegreeTerms = mutate(secondDegreeTerms, V1.1 = V1*V1, V2.2 = V2*V2, V3.3 = V3*V3, V4.4 = V4*V4,
+                   V1.2 = V1*V2, V1.3 = V1*V3, V1.4 = V1*V4, V2.3 = V2*V3,
+                   V2.4 = V2*V4, V3.4=V3*V4)
+
+secondDegreeTermsY = cbind(secondDegreeTerms, y_iris_all)
+
+error_train_total2 = matrix(0, nrow = length(xlambda), ncol = 1)
+error_cross_total2 = matrix(0, nrow = length(xlambda), ncol = 1)
+
+iris_train = secondDegreeTermsY[1:(num_sample*((k-1)/k)),]
+iris_cross = secondDegreeTermsY[1:(num_sample*((1)/k)),]
+
+for(ilambda in 1:length(xlambda)){
+  pick = k #pick kth set
+  
+  error_train = 0
+  error_cross = 0
+  
+  for(j in 1:k){
+    i_tmp = 1
+    for(i in 1:k){
+      
+      #choose training set, and cross validation set 
+      if(i == pick){
+        iris_cross = secondDegreeTermsY[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
+      } else {
+        iris_train[((i_tmp-1)*num_sample/k+1):(num_sample*(i_tmp/k)),
+                   ] = secondDegreeTermsY[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
+        i_tmp = i_tmp + 1
+      }
+    }
+    
+    pick = pick - 1
+    
+    y_iris_train = iris_train[,15]
+    x_iris_train = iris_train[,-15]
+    yx_iris_train = cbind(x_iris_train, y_iris_train)
+    
+    y_iris_cross = iris_cross[,15]
+    x_iris_cross = iris_cross[,-15]
+    
+    
+    iris_model = lm.ridge(y_iris_train~., yx_iris_train, lambda=xlambda[ilambda])
+    
+    A = as.array(iris_model$coef[1:14]/iris_model$scales)
+    X_train = x_iris_train
+    for( i in seq(from = 1, to = ncol(x_iris_train))){
+      X_train[,i] = x_iris_train[,i] - iris_model$xm[i]
+    }
+    X_train=as.matrix(X_train)
+    yh = X_train%*%A + iris_model$ym
+    
+    yhP = (yh >= 0.0)
+    yp = (y_iris_train >= 0.0)
+    error_train = error_train + sum(yhP != yp)/(length(y_iris_train)*k/0.00001*0.00001)
+    
+    
+    X_cross = x_iris_cross
+    for( i in seq(from = 1, to = ncol(x_iris_cross))){
+      X_cross[,i] = x_iris_cross[,i] - iris_model$xm[i]
+    }
+    X_cross=as.matrix(X_cross)
+    yh = X_cross%*%A + iris_model$ym
+    
+    
+    
+    yhP = (yh >= 0.0)
+    yp = (y_iris_cross >= 0.0)
+    
+    error_cross = error_cross + sum(yhP != yp)/(length(y_iris_cross)*k/0.00001*0.00001)
+    
+  }
+  
+  error_train_total2[ilambda,1] = error_train
+  error_cross_total2[ilambda,1] = error_cross
+}
+
+min_iris_lambda2 <- xlambda[min(which(min(error_cross_total2) == error_cross_total2))]
+th_lambda = min(which(min(error_cross_total2) == error_cross_total2))
+cat(th_lambda, "th lambda", min_iris_lambda2, "is optimal.")
+
+plot(1:length(xlambda),error_train_total2[,1],
+     ylim=c(min(error_train_total2, error_cross_total2),
+            max(error_train_total2, error_cross_total2)))
+points(1:length(xlambda),error_cross_total2[,1], col='red')
+
+sprintf("minimum error of linear model with no additional term: %f", min(error_cross_total))
+
+sprintf("minimum error of linear model with 2 dim additional term: %f", min(error_cross_total2))
+  
+@
+\newpage
+{\bf\Large Question 5}
+
+5) This is a multi-class problem. Consider the Glass Identification Data Set from the UC Irvine Data Repository. The Data is located at the web site:
+http://archive.ics.uci.edu/ml/datasets/Glass%2BIdentification
+This problem will only work with building and vehicle window glass (classes 1,2 and 3), so it only uses the first 163 rows of data. (Ignore rows 164 through 214) With this set up this is a three class problem. Use ridge regression to classify this data into the three classes: building windows float processed, building windows non float processed, and vehicle windows float processed.
+
+<<echo=TRUE, results=verbatim, fig=TRUE>>=
+#QUESTION 5
+# This is a multi-class problem. Consider the Glass Identification Data Set from the UC Irvine Data Repository. 
+# This problem will only work with building and vehicle window glass (classes 1,2 and 3), 
+# so it only uses the first 163 rows of data. (Ignore rows 164 through 214) 
+# With this set up this is a three class problem. 
+# Use ridge regression to classify this data into the three classes: 
+# building windows float processed, building windows non float processed, 
+# and vehicle windows float processed.
+
+## Q5
+k = 10
+glass_data = read.table("glass.txt", header=FALSE, sep=',')
+glass_data = glass_data[1:163,]
+
+row.names(glass_data)<-NULL
+
+num_sample = nrow(glass_data)
+glass_data = glass_data[sample(num_sample, num_sample, replace=FALSE),]
+
+class1 = rep(0,163)
+class2 = rep(0,163)
+class3 = rep(0,163)
+
+class1[glass_data[,11]==1] = 1
+class1[glass_data[,11]!=1] = -1
+
+class2[glass_data[,11]==2] = 1
+class2[glass_data[,11]!=2] = -1
+
+class3[glass_data[,11]==3] = 1
+class3[glass_data[,11]!=3] = -1
+
+
+glass_data = cbind(glass_data, class1, class2, class3)
+
+
+min_glass_lambda=rep(1000,3)
+glass_train = glass_data[1:round((num_sample*((k-1)/k))),]
+
+error_glass_train_total = matrix(0, nrow = length(xlambda), ncol = 3)
+error_glass_cross_total = matrix(0, nrow = length(xlambda), ncol = 3)
+
+th_lambda = c(0,0,0)
+min_error = c(0,0,0)
+
+for(iy in 1:3){
+  
+  for(ilambda in 1:length(xlambda)){
+    pick = k #pick kth set
+    
+    error_train = 0
+    error_cross = 0
+    
+    for(j in 1:k){
+      i_tmp = 1
+      for(i in 1:k){
+        
+        #choose training set, and cross validation set 
+        if(i == pick){
+          glass_cross = glass_data[(round((i-1)*num_sample/k)+1):(round(num_sample*(i/k))),]
+        } else {
+          glass_train[((i_tmp-1)*num_sample/k+1):(num_sample*(i_tmp/k)),
+                      ] = glass_data[((i-1)*num_sample/k+1):(num_sample*(i/k)),]
+          i_tmp = i_tmp + 1
+        }
+      }
+      
+      pick = pick - 1
+      
+      y_glass_train = glass_train[,11+iy]
+      x_glass_train = glass_train[,1:10]
+      yx_glass_train = cbind(x_glass_train, y_glass_train)
+      
+      y_glass_cross = glass_cross[,11+iy]
+      x_glass_cross = glass_cross[,1:10]
+      
+      glass_model = lm.ridge(y_glass_train~., yx_glass_train, lambda=xlambda[ilambda])
+      A = as.array(glass_model$coef[1:10]/glass_model$scales)      
+      X_train = x_glass_train
+      for( i in seq(from = 1, to = ncol(x_glass_train))){
+        X_train[,i] = x_glass_train[,i] - glass_model$xm[i]
+      }
+      X_train=as.matrix(X_train)
+      yh = X_train%*%A + glass_model$ym
+      
+      
+      yhP = (yh >= 0.0)
+      yp = (y_glass_train >= 0.0)
+      error_train = error_train + sum(yhP != yp)/(length(y_glass_train)*k*0.00001/0.00001)
+      
+      
+      X_cross = x_glass_cross
+      for( i in seq(from = 1, to = ncol(x_glass_cross))){
+        X_cross[,i] = x_glass_cross[,i] - glass_model$xm[i]
+      }
+      X_cross=as.matrix(X_cross)
+      yh = X_cross%*%A + glass_model$ym
+      
+      
+      yhP = (yh >= 0.0)
+      yp = (y_glass_cross >= 0.0)
+      
+      error_cross = error_cross + sum(yhP != yp)/(length(y_glass_cross)*k*0.00001/0.00001)
+      
+    }
+    
+    error_glass_train_total[ilambda,iy] = error_train
+    error_glass_cross_total[ilambda,iy] = error_cross
+    
+  }
+  min_glass_lambda[iy] <- xlambda[min(which(min(error_glass_cross_total[,iy
+                                                                        ]) == error_glass_cross_total[,iy]))]
+  th_lambda[iy]=min(which(min(error_glass_cross_total[,iy]) == error_glass_cross_total[,iy]))
+}
+
+sprintf("minimum classification error are %f, %f, %f",
+        error_glass_cross_total[5,1], 
+        error_glass_cross_total[11,2],
+        error_glass_cross_total[13,3])
+
+## [1] "minimum classification error are 0.018382, 0.165441, 0.085662"
+plot(1:length(xlambda),error_glass_train_total[,1],
+     ylim=c(min(error_glass_train_total, error_glass_cross_total),
+            max(error_glass_train_total, error_glass_cross_total)))
+points(1:length(xlambda),error_glass_cross_total[,1], col='red')
+
+plot(1:length(xlambda),error_glass_train_total[,2],
+     ylim=c(min(error_glass_train_total, error_glass_cross_total),
+            max(error_glass_train_total, error_glass_cross_total)))
+points(1:length(xlambda),error_glass_cross_total[,2], col='red')
+
+plot(1:length(xlambda),error_glass_train_total[,3],
+     ylim=c(min(error_glass_train_total, error_glass_cross_total),
+            max(error_glass_train_total, error_glass_cross_total)))
+points(1:length(xlambda),error_glass_cross_total[,3], col='red')
+@
+
+\end{document}
