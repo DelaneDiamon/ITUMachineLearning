@@ -1,11 +1,11 @@
 \documentclass{article}
-\title{Decision Trees Homework}
+\title{Linear Methods Homework}
 \author{Dmitrii Dunin, ITU ID 94739}
 %\DeclareGraphicsExtensions{.png,.pdf}
 \begin{document}
 \SweaveOpts{concordance=TRUE,prefix.string=Dmitrii}
 \begin{center}
-{\bf\Large Decision Trees Homework}
+{\bf\Large Linear Methods Homework}
 \end{center}
 \begin{center}
 {\Large Dmitrii Dunin, ITU ID 94739}
