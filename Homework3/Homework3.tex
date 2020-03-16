@@ -1,0 +1,310 @@
+\documentclass{article}
+\title{Decision Trees Homework}
+\author{Dmitrii Dunin, ITU ID 94739}
+%\DeclareGraphicsExtensions{.png,.pdf}
+\usepackage{Sweave}
+\begin{document}
+\input{Dmitrii-concordance}
+\begin{center}
+{\bf\Large Decision Trees Homework}
+\end{center}
+\begin{center}
+{\Large Dmitrii Dunin, ITU ID 94739}
+\end{center}
+\begin{center}
+{\bf\Large International Technological University}
+\end{center}
+
+\section*{Question 1}
+
+\begin{Schunk}
+\begin{Sinput}
+> rm(list=ls())
+> require(graphics)
+> require(stringr)
+> require(rpart)
+> require(ISLR)
+> setwd("F:/Workspace/R/Homework3")
+\end{Sinput}
+\end{Schunk}
+
+1) Once again check out wine quality data set described in the web page
+below:
+http://archive.ics.uci.edu/ml/machine-learning-databases/winequality/winequality.names
+Remember the Red Wine data set (winequality-red.csv) contains 1599
+observations of 11 attributes. The median score of the wine tasters is given in
+the last column. Note also that the delimiter used in this file is a semi colon
+and not a comma. This problem is to create an ordinary least squares linear
+model (use the lm function in R) for this data set using the first 1400
+observations. Don't forget to scale each column before you create the model.
+Next check the model's performance on the last 199 observations. How well
+did the model predict the results for the last 199 observations? What measure
+did you use to evaluate how well the model did this prediction? Next use the
+model to predict the results for the whole data set and measure how well your
+model worked. (hint: use the r function lm and the regression example from
+class)
+
+\section*{Answer  1}
+\begin{Schunk}
+\begin{Sinput}
+> set.seed(pi)
+> wine_data<-read.csv("winequality-red.csv",header = TRUE, sep=";")
+> # Scaling data before constructing models
+> scaled_wine_data<-scale(wine_data)
+> # First 1400 as train data
+> wine_train<-scaled_wine_data[1:1400,]
+> x_wine_train<-wine_train[,1:11]
+> y_wine_train<-wine_train[,12]
+> # Last 199 as test data
+> wine_test<-scaled_wine_data[1401:dim(wine_data)[1],]
+> x_wine_test<-wine_test[,1:11]
+> y_wine_test<-wine_test[,12]
+> # Contructing model, data = 1400 rows with first 11 columns
+> Predicted_OLS<-lm(y_wine_train~., data = as.data.frame(x_wine_train))
+> OLS_coef <- coef(Predicted_OLS)
+> # Using model to predict 199 last records
+> predicted_OLS_quality<-predict(Predicted_OLS, newdata = as.data.frame(x_wine_test))
+> # Calculating error
+> dY<-y_wine_test - predicted_OLS_quality
+> testErr_199 <- sqrt(sum(dY*dY))/(length(y_wine_test))	
+> paste("199 Last records predticiton error = ", testErr_199)
+\end{Sinput}
+\begin{Soutput}
+[1] "199 Last records predticiton error =  0.061249097889956"
+\end{Soutput}
+\begin{Sinput}
+> # Taking full data set
+> wine_data_x<-scaled_wine_data[,1:11]
+> wine_data_y<-scaled_wine_data[,12]
+> # Predicting last columng for all data set
+> lm_wine_data<-predict(Predicted_OLS, newdata = as.data.frame(wine_data_x))
+> dYData <- wine_data_y - lm_wine_data
+> # Calculating error for full set
+> dataErr <- sqrt(sum(dYData*dYData))/(length(wine_data_y))
+> paste("Full set prediciton error = ",dataErr)
+\end{Sinput}
+\begin{Soutput}
+[1] "Full set prediciton error =  0.0200136387039995"
+\end{Soutput}
+\begin{Sinput}
+> summary(lm_wine_data)
+\end{Sinput}
+\begin{Soutput}
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-1.69121 -0.45265 -0.03970  0.01544  0.46124  2.17223 
+\end{Soutput}
+\end{Schunk}
+
+\section*{Question 2}
+
+2) Perform a ridge regression on the wine quality data set from problem 1
+using only the first 1400 observations. Compare the results of applying the
+ridge regression model to the last 199 observations with the results of
+applying the ordinary least square model to these observations. Compare the
+coefficients resulting from the ridge regression with the coefficients that were
+obtained in problem 1. What conclusions can you make from this
+comparison?
+
+\section*{Answer 2}
+\begin{Schunk}
+\begin{Sinput}
+> library(glmnet)
+> # Train data for Ridge
+> ridge_wine_train = scaled_wine_data[1:1400,]
+> ridge_x_wine_train = ridge_wine_train[,1:11]
+> ridge_y_wine_train = ridge_wine_train[,12]
+> # Test data for Ridge (199 last)
+> test_wine_ridge = scaled_wine_data[1401:dim(wine_data)[1],]
+> test_x_wine = test_wine_ridge[,1:11]
+> test_y_wine = test_wine_ridge[,12]
+> # Using glmnet on train data to get a model to predict quality
+> cv.out=cv.glmnet(as.matrix(ridge_x_wine_train), ridge_y_wine_train, alpha = 0 )
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> plot(cv.out)
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-Answer2plot1}
+\begin{Schunk}
+\begin{Sinput}
+> # Taking minimum lambda to use in next prediction
+> bestlambda=cv.out$lambda.min
+> bestlambda
+\end{Sinput}
+\begin{Soutput}
+[1] 0.04874846
+\end{Soutput}
+\begin{Sinput}
+> #Make fair comraison of Error
+> ridgeMod=glmnet(as.matrix(ridge_x_wine_train), ridge_y_wine_train, alpha = 0, lambda = bestlambda)
+> predicted_Ridge_quality= predict(ridgeMod, newx = as.matrix(test_x_wine))[1:dim(test_x_wine),]
+> ridge_testErr = sqrt(sum((test_y_wine - predicted_Ridge_quality)^2))/length(predicted_Ridge_quality)
+> ridge_coef<-coef(ridgeMod)
+> paste("Ridge error = ", ridge_testErr)
+\end{Sinput}
+\begin{Soutput}
+[1] "Ridge error =  0.0613576627146581"
+\end{Soutput}
+\begin{Sinput}
+> paste("Ridge lambda = ", bestlambda, "alpha = 0")
+\end{Sinput}
+\begin{Soutput}
+[1] "Ridge lambda =  0.0487484578909308 alpha = 0"
+\end{Soutput}
+\begin{Sinput}
+> # Predicted_OLS vs Predicted_Ridge
+> library(ggplot2)
+> library(dplyr)
+> library(tidyr)
+> index = c(1401:dim(wine_data)[1])
+> df=data.frame(index,test_y_wine, predicted_OLS_quality, predicted_Ridge_quality)
+> dfplot <- df %>% gather(key, value, -index)
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> ggplot(dfplot, mapping = aes(x = index, y = value, color = key) ) + geom_line()
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-Answer2plot2}
+\begin{Schunk}
+\begin{Sinput}
+> diff_OLS_Ridge = predicted_OLS_quality - predicted_Ridge_quality
+> OLS_coef
+\end{Sinput}
+\begin{Soutput}
+         (Intercept)        fixed.acidity     volatile.acidity 
+          0.01543785           0.05023145          -0.23862339 
+         citric.acid       residual.sugar            chlorides 
+         -0.03504472           0.01146886          -0.10638580 
+ free.sulfur.dioxide total.sulfur.dioxide              density 
+          0.04423963          -0.13961796          -0.03494001 
+                  pH            sulphates              alcohol 
+         -0.05580298           0.18328213           0.36639494 
+\end{Soutput}
+\begin{Sinput}
+> ridge_coef
+\end{Sinput}
+\begin{Soutput}
+12 x 1 sparse Matrix of class "dgCMatrix"
+                              s0
+(Intercept)           0.01474809
+fixed.acidity         0.06597727
+volatile.acidity     -0.22457003
+citric.acid          -0.01413464
+residual.sugar        0.01971215
+chlorides            -0.10214615
+free.sulfur.dioxide   0.03599691
+total.sulfur.dioxide -0.13224343
+density              -0.06164116
+pH                   -0.03701236
+sulphates             0.17689476
+alcohol               0.33633856
+\end{Soutput}
+\begin{Sinput}
+> summary(ridge_coef)
+\end{Sinput}
+\begin{Soutput}
+12 x 1 sparse Matrix of class "dgCMatrix", with 12 entries 
+    i j           x
+1   1 1  0.01474809
+2   2 1  0.06597727
+3   3 1 -0.22457003
+4   4 1 -0.01413464
+5   5 1  0.01971215
+6   6 1 -0.10214615
+7   7 1  0.03599691
+8   8 1 -0.13224343
+9   9 1 -0.06164116
+10 10 1 -0.03701236
+11 11 1  0.17689476
+12 12 1  0.33633856
+\end{Soutput}
+\begin{Sinput}
+> mean(ridge_coef)
+\end{Sinput}
+\begin{Soutput}
+[1] 0.00649333
+\end{Soutput}
+\begin{Sinput}
+> median(ridge_coef)
+\end{Sinput}
+\begin{Soutput}
+[1] 0.000306721
+\end{Soutput}
+\begin{Sinput}
+> summary(OLS_coef)
+\end{Sinput}
+\begin{Soutput}
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+-0.238623 -0.068449 -0.011736  0.005053  0.045738  0.366395 
+\end{Soutput}
+\end{Schunk}
+
+\section*{Question 4}
+
+4) See if you can improve on regression-based classification of the iris
+data that we did in class. Classify the iris data set with second degree
+terms added using a ridge regression. (ie supplement the original 4
+attributes x1, x2, x3, and x4 by including the 10 second degree terms (
+x1*x1, x1*x2, x1*x3, . ) for a total of 14 attributes.) Use multiclass to
+classify the data and then compare the results with the results obtained in
+class.
+It is fine to use brute force to add these attributes. For those who are
+adventurous, investigate the function mutate in the package plyr
+
+
+\section*{Answer 4}
+\begin{Schunk}
+\begin{Sinput}
+> rm(list=ls())
+> library(datasets)
+> library(dplyr)
+> iris_orig_data = as.data.frame(iris)
+> orig_lm = lm(iris_orig_data$Species~., data = iris_orig_data[1:4])
+> # Getting the list of columns for further mutation
+> # Sepal.Length Sepal.Width Petal.Length Petal.Width
+> columns_for_mutation = attributes(iris_orig_data)$names[
++                                                         1:length(
++                                                           attributes(iris_orig_data)$names)-1
++                                                         ]
+> # Adding squared column values
+> iris_mutated_data = mutate_at(iris_orig_data, 
++                               .vars=columns_for_mutation, 
++                               .funs=list(Squared = ~.^2))
+> # Adding values multiplied by 2
+> iris_mutated_data = mutate_at(iris_mutated_data, 
++                               .vars=columns_for_mutation, 
++                               .funs=list(Doubled = ~.*2))
+> # Adding values of columns 1-2 multiplied by each other
+> iris_mutated_data = mutate(iris_mutated_data, 
++                            "Sepal.Length_x_Sepal.Width" = Sepal.Length * Sepal.Width) 
+> # Adding values of columns 3-4 multiplied by each other                            
+> iris_mutated_data = mutate(iris_mutated_data, 
++                            "Petal.Length_x_Petal.Width" = Petal.Length * Petal.Width) 
+> # Reordering data set
+> iris_mutated_data_ordered <- iris_mutated_data[, 
++                                                c(which(
++                                                       colnames(
++                                                           iris_mutated_data) !="Species"),
++                                                  which(
++                                                       colnames(
++                                                           iris_mutated_data)=="Species"))
++                                               ]
+> # Train data
+> ridge_x_iris = iris_mutated_data_ordered[,1:14]
+> ridge_y_iris = iris_mutated_data_ordered[,15]
+> # Making a model
+> cv.out=cv.glmnet(as.matrix(ridge_x_iris), ridge_y_iris, alpha = 0, family='multinomial')
+\end{Sinput}
+\end{Schunk}
+\begin{Schunk}
+\begin{Sinput}
+> plot(cv.out)
+\end{Sinput}
+\end{Schunk}
+\includegraphics{Dmitrii-Answer4plot1}
+
+\end{document}
