@@ -1,0 +1,527 @@
+\documentclass{article}
+\title{Support Vector Machines Homework}
+\author{Dmitrii Dunin, ITU ID 94739}
+%\DeclareGraphicsExtensions{.png,.pdf}
+\begin{document}
+\SweaveOpts{concordance=TRUE,prefix.string=Dmitrii}
+\begin{center}
+{\bf\Large Support Vector Machines}
+\end{center}
+\begin{center}
+{\Large Dmitrii Dunin, ITU ID 94739}
+\end{center}
+\begin{center}
+{\bf\Large International Technological University}
+\end{center}
+
+\section*{Question 1}
+
+<<label=Setup1, echo=True,results=verbatim>>=
+rm(list = ls())
+setwd("F:/Workspace/R/Homework6")
+par(mar = rep(2, 4))
+wine <- read.csv("winequality-red.csv", header = TRUE, sep = ";")
+library(e1071)
+str(wine$quality)
+x <- subset(wine, select = -quality)
+y <- as.numeric(wine$quality)
+wine_factor <- cbind(x, quality = as.factor(y))
+wineTrain <- wine_factor[1:1400, ]
+wineTest <- wine_factor[1401:1599, ]
+@
+
+1) In a past homework, you performed ridge regression on the wine quality
+data set. Now use a support vector machine to classify these data.
+
+1a) First classify the data treating the last column as an ordered factor (the
+wine tasters score). Next treat the last column as a numeric. Which SVM
+implementation is better? Why do you think it is better?
+
+1b) Using the best version choose two attributes and a slice through the data
+to plot. Choose a different set of attributes and another set of slices to plot.
+
+1c) Compare and contrast the best version of the SVM with the ridge
+regression model.
+
+\section*{Answer  1}
+<<label=Answer1, echo=True,results=verbatim>>=
+
+str(wine_factor)
+
+x_factor <- subset(wineTest, select = -quality)
+y_factor <- wineTest$quality
+
+wine_svm <- svm(quality ~ ., data = wineTrain)
+summary(wine_svm)
+
+wine_factor_predict <- predict(wine_svm, x_factor)
+
+1 - sum(wine_factor_predict == y_factor) / length(y_factor)
+
+wine_svm_tuned <- tune(
+  svm,
+  quality ~ .,
+  data = wineTrain,
+  ranges = list(gamma = seq(.05, .11, .01), cost = seq(1, 4, 0.5)),
+  tunecontrol = tune.control(sampling = "cross")
+)
+summary(wine_svm_tuned)
+@
+<<label=Answer1plot1, echo=True,results=verbatim, fig=true>>=
+plot(wine_svm_tuned)
+@
+<<label=Answer1cont1, echo=True,results=verbatim>>=
+wine_svm_tuned$best.parameters
+wine_svm <-
+  svm(quality ~ .,
+      data = wineTrain,
+      gamma = 0.07,
+      cost = 1.5)
+wine_factor_predict <- predict(wine_svm, x_factor)
+
+1 - sum(wine_factor_predict == y_factor) / length(y_factor)
+wine_numeric <- cbind(x, quality = y)
+str(wine_numeric)
+wineTrain <- wine_numeric[1:1400,]
+wineTest <- wine_numeric[1401:1599,]
+
+x_factor <- subset(wineTest, select = -quality)
+y_factor <- wineTest$quality
+
+wine_svm <- svm(quality ~ ., data = wineTrain)
+summary(wine_svm)
+wine_factor_predict <- predict(wine_svm, x_factor)
+
+sqrt(sum((wineTest$quality - wine_factor_predict) ^ 2)) / length(wine_factor_predict)
+wine_svm_tuned <- tune(
+  svm,
+  quality ~ .,
+  data = wineTrain,
+  ranges = list(gamma = seq(.05, .11, .01), cost = seq(1, 4, 0.5)),
+  tunecontrol = tune.control(sampling = "cross")
+)
+
+summary(wine_svm_tuned)
+@
+<<label=Answer1plot2, echo=True,results=verbatim, fig=true>>=
+plot(wine_svm_tuned)
+@
+<<label=Answer1cont2, echo=True,results=verbatim>>=
+wine_svm_tuned$best.parameters
+wine_svm <-
+  svm(quality ~ .,
+      data = wineTrain,
+      gamma = 0.1,
+      cost = 2)
+wine_factor_predict <- predict(wine_svm, x_factor)
+
+sqrt(sum((wineTest$quality - wine_factor_predict) ^ 2)) / length(wine_factor_predict)
+print("quality as factor had error = 0.437 but numeric quality had small error = 0.0495")
+print("Regression is better than classification")
+@
+
+\section*{Question 2}
+
+<<label=Setup2, echo=True,results=verbatim>>=
+rm(list = ls())
+sonarTest <- read.csv("sonar_test.csv", header = FALSE)
+sonarTest$V61[sonarTest$V61 == -1] <- 0
+
+sonarTrain <- read.csv("sonar_train.csv", header = FALSE)
+sonarTrain$V61[sonarTrain$V61 == -1] <- 0
+
+
+x <- subset(sonarTest, select = -V61)
+y <- sonarTest$V61
+
+sonar_svm <- svm(V61 ~ ., data = sonarTrain)
+summary(sonar_svm)
+@
+
+2) Classify the sonar data set.
+
+2a) Use a support vector machine to classify the sonar data set. First tune an
+SVM employing radial basis function (default). Next tune an SVM employing
+a linear kernel. Compare the results.
+
+\section*{Answer  2}
+
+<<label=Answer2, echo=True,results=verbatim>>=
+sonar_predict <- predict(sonar_svm, x)
+
+sqrt(sum((y - sonar_predict) ^ 2)) / length(sonarTest)
+sonar_svm_tuned <- tune(
+  svm,
+  V61 ~ .,
+  data = sonarTrain,
+  ranges = list(gamma = seq(0, .05, .01), cost = seq(1, 4, 0.5)),
+  tunecontrol = tune.control(sampling = "cross")
+)
+
+summary(sonar_svm_tuned)
+@
+<<label=Answer2plot1, echo=True,results=verbatim, fig=true>>=
+plot(sonar_svm_tuned)
+@
+<<label=Answer2cont1, echo=True,results=verbatim>>=
+sonar_svm_tuned$best.parameters
+sonar_svm <- svm(V61 ~ .,
+                 data = sonarTrain,
+                 gamma = 0.02,
+                 cost = 4)
+sonar_predict <- predict(sonar_svm, x)
+
+sqrt(sum((y - sonar_predict) ^ 2)) / length(y)
+sonar_svm <- svm(V61 ~ ., data = sonarTrain, kernel = "linear")
+summary(sonar_svm)
+sonar_svm_tuned <-
+  tune(
+    svm,
+    V61 ~ .,
+    data = sonarTrain,
+    kernel = "linear",
+    ranges = list(gamma = seq(0, .05, .01), cost = seq(1, 4, 0.5)),
+    tunecontrol = tune.control(sampling = "cross")
+  )
+summary(sonar_svm_tuned)
+@
+<<label=Answer2plot2, echo=True,results=verbatim, fig=true>>=
+plot(sonar_svm_tuned)
+@
+<<label=Answer2cont2, echo=True,results=verbatim>>=
+sonar_svm_tuned$best.parameters
+sonar_svm <-
+  svm(
+    V61 ~ .,
+    data = sonarTrain,
+    gamma = 0,
+    cost = 1,
+    kernel = "linear"
+  )
+sonar_predict <- predict(sonar_svm, x)
+
+error <- sqrt(sum((y - sonar_predict) ^ 2)) / length(y)
+print("In Homework 2 Problem 4 Sonar Test Error using trees was 0.2564103")
+paste("Smaller Sonar Test Error using SVM was", error)
+@
+\section*{Question 3}
+
+3) The in class example (svm1.r) used the glass data set. Use the Random
+Forest technique on the glass data. Compare the Random Forest results with
+the results obtained in class with SVM
+
+<<label=Setup3, echo=True,results=verbatim>>=
+library(randomForest)
+library(mlbench)
+data(Glass, package = "mlbench")
+str(Glass)
+@
+
+\section*{Answer  3}
+
+<<label=Answer3, echo=True,results=verbatim>>=
+Glass$Type
+index <- 1:nrow(Glass)
+set.seed(pi)
+testindex <- sample(index, trunc(length(index) / 3))
+testset <- Glass[testindex,]
+trainset <- Glass[-testindex,]
+
+x <- subset(trainset, select = -Type)
+y <- trainset$Type
+rf_Glass_Model <- randomForest(x, y)
+
+xTest <- subset(testset, select = -Type)
+yTest <- testset$Type
+predictGlass <- predict(rf_Glass_Model, xTest)
+error <- 1 - sum(predictGlass == yTest) / length(yTest)
+
+paste("Random Forest, with seed = pi, error =", error)
+@
+
+
+\section*{Question 4}
+
+4) Choose a new data set which we haven't used in class yet (suggestion:
+choose one from http://archive.ics.uci.edu/ml/.) Use SVM to classify the data
+set. Try different kernels. Does changing the kernel make a difference?
+Which kernel resulted in the smallest error? Use another technique to classify
+the data set. Which resulted in the better model? (Make sure you describe
+the data set)
+
+<<label=Setup4, echo=True,results=verbatim>>=
+rm(list = ls())
+abalone <- read.csv(file = "abalone.data", header = FALSE)
+head(abalone)
+colnames(abalone) <-
+  c(
+    "Sex",
+    "Length",
+    "Diameter",
+    "Height",
+    "Whole weight",
+    "Shucked weight",
+    "Viscera weight",
+    "Shell weight",
+    "Rings"
+  )
+str(abalone)
+@
+
+\section*{Answer  4}
+
+<<label=Answer4, echo=True,results=verbatim>>=
+abaloneTrain <- abalone[1:2500, ]
+abaloneTest <- abalone[2501:4177, ]
+
+x <- subset(abaloneTest, select = -Rings)
+y <- abaloneTest$Rings
+
+abalone_svm <- svm(Rings ~ ., data = abaloneTrain)
+summary(abalone_svm)
+abalone_predict <- predict(abalone_svm, x)
+
+sqrt(sum((y - abalone_predict) ^ 2)) / length(y)
+abalone_svm_tuned <- tune(
+  svm,
+  Rings ~ .,
+  data = abaloneTrain,
+  ranges = list(gamma = seq(0, .4, .1), cost = seq(1, 3, 0.5)),
+  tunecontrol = tune.control(sampling = "cross")
+)
+summary(abalone_svm_tuned)
+abalone_svm_tuned$best.parameters
+
+abalone_svm <-
+  svm(Rings ~ .,
+      data = abaloneTrain,
+      gamma = 0.1,
+      cost = 2)
+abalone_predict <- predict(abalone_svm, x)
+
+rb_error <- sqrt(sum((y - abalone_predict) ^ 2)) / length(y)
+rb_error
+
+abalone_svm <- svm(Rings ~ ., data = abaloneTrain, kernel = "linear")
+summary(abalone_svm)
+
+abalone_predict <- predict(abalone_svm, x)
+
+sqrt(sum((y - abalone_predict) ^ 2)) / length(y)
+
+abalone_svm <-
+  svm(Rings ~ ., data = abaloneTrain, kernel = "polynomial")
+summary(abalone_svm)
+
+abalone_predict <- predict(abalone_svm, x)
+
+sqrt(sum((y - abalone_predict) ^ 2)) / length(y)
+
+library(randomForest)
+xTrain <- subset(abaloneTrain, select = -Rings)
+yTrain <- abaloneTrain$Rings
+
+rf_Abalone_Model <- randomForest(xTrain, yTrain)
+
+predictAbalone <- predict(rf_Abalone_Model, x)
+sqrt(sum((y - predictAbalone) ^ 2)) / length(y)
+
+print("SVM with Radial basis kernel is better model")
+@
+
+\section*{Question 5}
+
+5) Use SVM with kernel = "linear" to create regression predictions on the data
+set created using these lines of code:
+x <- seq(0.1, 5, by = 0.05) \# the observed feature
+y <- log(x) + rnorm(x, sd = 0.2) \# the target for the observed feature
+Next try various kernels and added features with SVM. Can you improve the
+model by adding an extra feature which might be a function of the first
+feature? Compare both lm.ridge and svm. Which method produced a better
+model? (don't forget to tune your models)
+
+<<label=Setup5, echo=True,results=verbatim>>=
+rm(list = ls())
+x <- seq(0.1, 5, by = 0.05)
+y <- log(x) + rnorm(x, sd = 0.2)
+dataset <- as.data.frame(cbind(x, y))
+str(dataset)
+@
+
+\section*{Answer  5}
+
+<<label=Answer5, echo=True,results=verbatim>>=
+dataset_svm <- svm(y ~ ., data = dataset, kernel = "linear")
+summary(dataset_svm)
+
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm_tuned <-
+  tune(
+    svm,
+    y ~ .,
+    data = dataset,
+    kernel = "linear",
+    ranges = list(gamma = seq(0, 2, .5), cost = seq(1, 3.5, 0.5)),
+    tunecontrol = tune.control(sampling = "cross")
+  )
+summary(dataset_svm_tuned)
+@
+<<label=Answer5plot1, echo=True,results=verbatim, fig=true>>=
+plot(dataset_svm_tuned)
+@
+<<label=Answer5cont1, echo=True,results=verbatim>>=
+dataset_svm_tuned$best.parameters
+dataset_svm <-
+  svm(
+    y ~ .,
+    data = dataset,
+    kernel = "linear",
+    gamma = 0,
+    cost = 2.5
+  )
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm <- svm(y ~ ., data = dataset)
+summary(dataset_svm)
+
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm_tuned <- tune(
+  svm,
+  y ~ .,
+  data = dataset,
+  ranges = list(gamma = seq(0, 2, .5), cost = seq(1, 3.5, 0.5)),
+  tunecontrol = tune.control(sampling = "cross")
+)
+dataset_svm_tuned$best.parameters
+
+dataset_svm <- svm(y ~ .,
+                   data = dataset,
+                   gamma = 1.5,
+                   cost = 3.5)
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm <- svm(y ~ ., data = dataset, kernel = "polynomial")
+summary(dataset_svm)
+
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm_tuned <-
+  tune(
+    svm,
+    y ~ .,
+    data = dataset,
+    kernel = "polynomial",
+    ranges = list(gamma = seq(0, 2, .5), cost = seq(1, 3.5, 0.5)),
+    tunecontrol = tune.control(sampling = "cross")
+  )
+dataset_svm_tuned$best.parameters
+
+dataset_svm <-
+  svm(
+    y ~ .,
+    data = dataset,
+    kernel = "polynomial",
+    gamma = 0.5,
+    cost = 1.5
+  )
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm <- svm(y ~ ., data = dataset, kernel = "sigmoid")
+summary(dataset_svm)
+
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm_tuned <-
+  tune(
+    svm,
+    y ~ .,
+    data = dataset,
+    kernel = "sigmoid",
+    ranges = list(gamma = seq(0, 2, .5), cost = seq(1, 3.5, 0.5)),
+    tunecontrol = tune.control(sampling = "cross")
+  )
+dataset_svm_tuned$best.parameters
+
+dataset_svm <-
+  svm(
+    y ~ .,
+    data = dataset,
+    kernel = "sigmoid",
+    gamma = 0,
+    cost = 1
+  )
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+xlog <- log(x)
+dataset <- as.data.frame(cbind(x, xlog, y))
+str(dataset)
+
+x <- dataset[, 1:2]
+dataset_svm <- svm(y ~ ., data = dataset, kernel = "linear")
+summary(dataset_svm)
+
+dataset_predict <- predict(dataset_svm, x)
+
+sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+dataset_svm_tuned <-
+  tune(
+    svm,
+    y ~ .,
+    data = dataset,
+    kernel = "linear",
+    ranges = list(gamma = seq(0, 2, .5), cost = seq(1, 3.5, 0.5)),
+    tunecontrol = tune.control(sampling = "cross")
+  )
+summary(dataset_svm_tuned)
+
+dataset_svm_tuned$best.parameters
+
+dataset_svm <-
+  svm(
+    y ~ .,
+    data = dataset,
+    kernel = "linear",
+    gamma = 0,
+    cost = 2.5
+  )
+dataset_predict <- predict(dataset_svm, x)
+
+svm_error <- sqrt(sum((y - dataset_predict) ^ 2)) / length(y)
+
+library(glmnet)
+
+dataset <- cbind(x, xlog, y)
+
+grid = 10 ^ seq(10, -2, length = 100)
+cv.out = cv.glmnet(as.matrix(dataset), y, alpha = 0, lambda = grid)
+cv.out$lambda.min
+
+ridgeMod = glmnet(as.matrix(dataset), y, alpha = 0, lambda = 0.01)
+ridgePredict <- predict(ridgeMod, newx = as.matrix(dataset))
+error <- sqrt(sum((y - ridgePredict) ^ 2)) / length(y)
+paste("Ridge Regression error", error)
+
+paste("SVM error", svm_error)
+
+print("lm.ridge produced a better model than SVM")
+@
+\end{document}
